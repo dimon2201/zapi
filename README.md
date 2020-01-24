@@ -5,6 +5,12 @@ Extremely fast data compression algorithm which
 also achieves rather good compression ratio.
 Written in pure C for portability.
 
+| sdds |   |   |   |   |
+|------|---|---|---|---|
+|      |   |   |   |   |
+|      |   |   |   |   |
+|      |   |   |   |   |
+
 # License
 The MIT License (MIT)
 
