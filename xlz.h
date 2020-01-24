@@ -9,6 +9,7 @@ extern "C" {
 #define XLZ1_CODECTYPE     10
 #define XLZ1_ERROR         0
 #define XLZ1_SHORTDATA     1
+#define XLZ1_OVERFLOW      1
 #define XLZ1_PRIME         4207803889UL
 
 typedef unsigned char      xlz_uint8;
