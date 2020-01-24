@@ -5,13 +5,6 @@ Extremely fast data compression algorithm which
 also achieves rather good compression ratio.
 Written in pure C for portability.
 
-# Format
-111xxxxx - Literals
-mmm0xxxx xxxxxxxx - Match
-1100xxxx mmmmmmmm xxxxxxxx - Match (extra ML)
-mmm1xxxx xxxxxxxx xxxxxxxx - Long match
-1101xxxx mmmmmmmm xxxxxxxx xxxxxxxx - Long match (extra ML) 
-
 # License
 The MIT License (MIT)
 
