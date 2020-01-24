@@ -124,7 +124,11 @@ stop:
 	}
 
 	xlz_uint32 compressed_size = dst - dest;
-
+	
+	if (compressed_size > source_size) {
+		return XLZ1_OVERFLOW;
+	}
+	
 	return compressed_size;
 }
 
