@@ -5,11 +5,14 @@ Extremely fast data compression algorithm which
 also achieves rather good compression ratio.
 Written in pure C for portability.
 
-| sdds |   |   |   |   |
-|------|---|---|---|---|
-|      |   |   |   |   |
-|      |   |   |   |   |
-|      |   |   |   |   |
+# Benchmark
+| Compressor | Speed    | Compressed size | Ratio  |
+|------------|----------|-----------------|--------|
+| XLZ1       | 129 MB/s | 47 860 611      | 2,0894 |
+| LZ4        | 119 MB/s | 57 066 747      | 1,7523 |
+| Shrinker   | 127 MB/s | 51 657 466      | 1,9358 |
+| FastLZ     | 122 MB/s | 54 223 908      | 1,8442 |
+| LZJB2010   | 115 MB/s | 68 721 529      | 1,4551 |
 
 # License
 The MIT License (MIT)
