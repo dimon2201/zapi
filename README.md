@@ -6,6 +6,7 @@ also achieves rather good compression ratio.
 Written in pure C for portability.
 
 # Benchmark
+enwik8 compression benchmark
 | Compressor | Speed    | Compressed size | Ratio  |
 |------------|----------|-----------------|--------|
 | XLZ1       | 129 MB/s | 47 860 611      | 2,0894 |
