@@ -1,6 +1,6 @@
 /*
 *	XLZ1 Compression algorithm
-*	Copyright 2019. Banebyte
+*	Copyright 2019-20. Banebyte
 *
 *	Extremely fast data compression algorithm which
 *	also achieves rather good compression ratio.
