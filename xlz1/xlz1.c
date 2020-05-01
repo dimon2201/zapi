@@ -117,11 +117,11 @@ stop:
 		// output pending literals
 		if (XLZ_LIKELY(literals)) {
 
-			while (XLZ_UNLIKELY(literals > 32)) {
+			while (XLZ_UNLIKELY(literals > 30)) {
 				*dst++ = 0xff;
-				memcpy(dst, lit, 32);
-				dst += 32, lit += 32;
-				literals -= 32;
+				memcpy(dst, lit, 31);
+				dst += 31, lit += 31;
+				literals -= 31;
 			}
 
 			if (XLZ_LIKELY(literals)) {
