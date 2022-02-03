@@ -3,7 +3,6 @@ Extrelemy fast LZ77 compression
 
 Extremely fast data compression algorithm which
 also achieves rather good compression ratio.
-Written in pure C for portability.
 
 # Benchmark
 enwik8 compression benchmark
