@@ -4,7 +4,6 @@
 *
 *	Extremely fast data compression algorithm which
 *	also achieves rather good compression ratio.
-*	Written in pure C for portability.
 *
 *	Format:
 *	111xxxxx - Literals
