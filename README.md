@@ -10,9 +10,9 @@ enwik8 compression benchmark
 | Compressor | Speed    | Compressed size | Ratio  |
 |------------|----------|-----------------|--------|
 | XLZ1       | 129 MB/s | 47 860 611      | 2,0894 |
-| LZ4        | 119 MB/s | 57 066 747      | 1,7523 |
 | Shrinker   | 127 MB/s | 51 657 466      | 1,9358 |
 | FastLZ     | 122 MB/s | 54 223 908      | 1,8442 |
+| LZ4        | 119 MB/s | 57 066 747      | 1,7523 |
 | LZJB2010   | 115 MB/s | 68 721 529      | 1,4551 |
 
 # License
