@@ -17,6 +17,7 @@ enwik8 compression benchmark
 
 # License
 The ISC License
+
 Copyright (c) 2019-2022, Dmitry Sirachenko
 
 Permission to use, copy, modify, and/or distribute this software for any
