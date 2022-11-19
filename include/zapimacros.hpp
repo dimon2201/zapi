@@ -4,6 +4,8 @@
 #define ZAPI_OK 1
 #define ZAPI_FAIL 0
 #define ZAPI_NULL 0
+#define ZAPI_ASSERT(s, error) \
+    if (s) { return error; }
 
 #if defined(__ILP32__) || defined(__arm__) || defined(_M_ARM) || defined(__i386__) || defined(_M_IX86) || defined(_X86_)
     // 32-bit architecture
@@ -42,6 +44,9 @@ namespace ZAPI
     typedef uint32              ucpuint;
     typedef uint32              cpuword;
     #endif
+    typedef uint32              word32;
+    typedef uint64              word64;
+    typedef word32              result;
 };
 
 #endif
