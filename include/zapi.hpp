@@ -23,7 +23,7 @@ namespace ZAPI
         return ZAPI_OK;
     }
 
-    class CodecState
+    class State
     {
 
     };
@@ -43,13 +43,16 @@ namespace ZAPI
                 if (this->m_Buffer == nullptr) { return ZAPI_FAIL; }
                 return MemoryFree(this->m_Buffer);
             }
+
+            T* GetData() { return this->m_Data; }
         
         private:
-            T* m_Buffer;
+            T* m_Data;
     };
 
-    class InputOutput
+    class Codec
     {
         public:
+            result Compress(State* zapiState);
     };
 };
