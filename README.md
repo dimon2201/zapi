@@ -1,4 +1,4 @@
-# XLZ
+# ZAPI
 Extrelemy fast LZ77 compression
 
 Extremely fast data compression algorithm which
