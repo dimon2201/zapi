@@ -25,7 +25,7 @@ namespace ZAPI
 
     class State
     {
-
+        
     };
 
     template <typename T>
@@ -52,6 +52,8 @@ namespace ZAPI
 
     class Codec
     {
+        ZAPI_XMACRO_DEFINE_STATIC_CLASS(Codec)
+
         public:
             result Compress(State* zapiState);
     };

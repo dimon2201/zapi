@@ -6,6 +6,8 @@
 #define ZAPI_NULL                           0
 #define ZAPI_ASSERT(s, error)               if (s) { return error; }
 
+#define ZAPI_XMACRO_DEFINE_STATIC_CLASS(T)  private: T(){} ~T(){}
+
 #if defined(__ILP32__) || defined(__arm__) || defined(_M_ARM) || defined(__i386__) || defined(_M_IX86) || defined(_X86_)
     // 32-bit architecture
     #define ZAPI_ARCH_32_BIT

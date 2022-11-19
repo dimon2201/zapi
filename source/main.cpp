@@ -1,8 +1,11 @@
+#include "../include/zapi.hpp"
 #include <iostream>
 
 int main()
 {
-    std::cout << "Hello World!" << std::endl;
+    ZAPI::State state;
 
+    std::cout << "Hello World!" << std::endl;
+    
     return 0;
 }
