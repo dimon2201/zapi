@@ -82,19 +82,19 @@ namespace zapi
     using zapi::word64;\
     using zapi::result;\
 
-constexpr zapi::ssize operator""_zs8(unsigned long long int val) { return (zapi::sint8)val; }
-constexpr zapi::usize operator""_zu8(unsigned long long int val) { return (zapi::uint8)val; }
-constexpr zapi::ssize operator""_zs16(unsigned long long int val) { return (zapi::sint16)val; }
-constexpr zapi::usize operator""_zu16(unsigned long long int val) { return (zapi::uint16)val; }
-constexpr zapi::ssize operator""_zs32(unsigned long long int val) { return (zapi::sint32)val; }
-constexpr zapi::usize operator""_zu32(unsigned long long int val) { return (zapi::uint32)val; }
-constexpr zapi::ssize operator""_zs64(unsigned long long int val) { return (zapi::sint64)val; }
-constexpr zapi::usize operator""_zu64(unsigned long long int val) { return (zapi::uint64)val; }
+constexpr zapi::sint8 operator""_zs8(unsigned long long int val) { return (zapi::sint8)val; }
+constexpr zapi::uint8 operator""_zu8(unsigned long long int val) { return (zapi::uint8)val; }
+constexpr zapi::sint16 operator""_zs16(unsigned long long int val) { return (zapi::sint16)val; }
+constexpr zapi::uint16 operator""_zu16(unsigned long long int val) { return (zapi::uint16)val; }
+constexpr zapi::sint32 operator""_zs32(unsigned long long int val) { return (zapi::sint32)val; }
+constexpr zapi::uint32 operator""_zu32(unsigned long long int val) { return (zapi::uint32)val; }
+constexpr zapi::sint64 operator""_zs64(unsigned long long int val) { return (zapi::sint64)val; }
+constexpr zapi::uint64 operator""_zu64(unsigned long long int val) { return (zapi::uint64)val; }
 constexpr zapi::ssize operator""_zss(unsigned long long int val) { return (zapi::ssize)val; }
 constexpr zapi::usize operator""_zus(unsigned long long int val) { return (zapi::usize)val; }
-constexpr zapi::ssize operator""_zcpw(unsigned long long int val) { return (zapi::cpword)val; }
-constexpr zapi::usize operator""_zcpsi(unsigned long long int val) { return (zapi::cpsint)val; }
-constexpr zapi::ssize operator""_zcpui(unsigned long long int val) { return (zapi::cpuint)val; }
-constexpr zapi::usize operator""_zw32(unsigned long long int val) { return (zapi::word32)val; }
-constexpr zapi::ssize operator""_zw64(unsigned long long int val) { return (zapi::word64)val; }
-constexpr zapi::usize operator""_zr(unsigned long long int val) { return (zapi::result)val; }
+constexpr zapi::cpword operator""_zcpw(unsigned long long int val) { return (zapi::cpword)val; }
+constexpr zapi::cpsint operator""_zcpsi(unsigned long long int val) { return (zapi::cpsint)val; }
+constexpr zapi::cpuint operator""_zcpui(unsigned long long int val) { return (zapi::cpuint)val; }
+constexpr zapi::word32 operator""_zw32(unsigned long long int val) { return (zapi::word32)val; }
+constexpr zapi::word64 operator""_zw64(unsigned long long int val) { return (zapi::word64)val; }
+constexpr zapi::result operator""_zr(unsigned long long int val) { return (zapi::result)val; }
