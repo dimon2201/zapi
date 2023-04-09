@@ -8,23 +8,19 @@ namespace zapi
         NONE = 1
     };
 
-    static void ProcessResult(ErrorCode result)
-    {
-        switch (result)
-        {
-            case ErrorCode::ERROR :
-            {
-                break;
-            }
-        }
-    }
+    namespace debug { static void ProcessResult(ErrorCode result); }
 
+    constexpr int VERSION_MAJOR                             = 0;
+    constexpr int VERSION_MINOR                             = 0;
+    constexpr int VERSION_RELEASE                           = 1;
+    constexpr int VERSION_CODE(int maj, int min, int rel)   { return ((maj & 0xff) << 24) | ((min & 0xff) << 16) | (rel & 0xffff); }
+    #define ZAPI_VERSION_CODE                               zapi::VERSION_CODE(zapi::VERSION_MAJOR, zapi::VERSION_MINOR, zapi::VERSION_RELEASE)
     constexpr int OK                                        = 1;
     constexpr int FAIL                                      = 0;
     constexpr int NOTHING                                   = 0;
     constexpr int TRUE                                      = 1;
     constexpr int FALSE                                     = 0;
-    #define ZAPI_CHECK(s, err)                              if (s) { ProcessResult(err); }
+    #define ZAPI_CHECK(s, err)                              if (s) { debug::ProcessResult(err); }
 
     #if defined(__ILP32__) || defined(__arm__) || defined(_M_ARM) || defined(__i386__) || defined(_M_IX86) || defined(_X86_)
         // 32-bit architecture
@@ -64,7 +60,7 @@ namespace zapi
     using result                                            = word32;
 };
 
-#define ZAPI_IMPORT_TYPES \
+#define ZAPI_IMPORT_NUMERIC_TYPES \
     using zapi::sint8;\
     using zapi::uint8;\
     using zapi::sint16;\

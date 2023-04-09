@@ -64,6 +64,23 @@ namespace zapi
         };
     }
 
-    class State
-    {};
+    namespace codec
+    {
+        class State
+        {};
+    }
+
+    namespace debug
+    {
+        static void ProcessResult(ErrorCode result)
+        {
+            switch (result)
+            {
+                case ErrorCode::ERROR :
+                {
+                    break;
+                }
+            }
+        }
+    }
 };
