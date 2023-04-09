@@ -7,12 +7,12 @@ namespace zapi
 {
     namespace memory
     {
-        template <typename T>
-        static T* Allocate(const usize byteWidth)
+        template <typename GranularType>
+        static GranularType* Allocate(const usize byteWidth)
         {
             ZAPI_CHECK(byteWidth == 0, ErrorCode::ERROR)
 
-            return (T*)malloc(byteWidth);
+            return (GranularType*)malloc(byteWidth);
         }
 
         static result Free(void* memory)
@@ -24,7 +24,7 @@ namespace zapi
             return OK;
         }
 
-        static result Copy(uint8* dest, const uint8* src, const usize byteWidth)
+        static result Copy(const uint8* src, uint8* dest, const usize byteWidth)
         {
             ZAPI_CHECK(((dest == nullptr) || (src == nullptr) || (byteWidth == 0)), ErrorCode::ERROR)
 
@@ -32,42 +32,69 @@ namespace zapi
 
             return OK;
         }
+
+        class AllocatedBaseObject
+        {
+            public:
+                explicit AllocatedBaseObject() {}
+                ~AllocatedBaseObject() {}
+
+                void* operator new(size_t size) { return Allocate<void>((usize)size); }
+                void operator delete(void* ptr) { Free(ptr); }
+        };
     }
 
     namespace storage
     {
-        template <typename T>
-        class Buffer
+        template <typename ElementType>
+        class Buffer : public memory::AllocatedBaseObject
         {
             public:
-                result Init(const void* memory, const usize byteWidth)
+                explicit Buffer(const void* memory, const usize byteWidth)
                 {
                     ZAPI_CHECK(memory == nullptr, ErrorCode::ERROR)
 
-                    _data = memory::Allocate<T>(byteWidth);
+                    _data = memory::Allocate<ElementType>(byteWidth);
                     memory::Copy( _data, memory, byteWidth );
-
-                    return OK;
                 }
 
-                result Free()
+                ~Buffer()
                 {
                     ZAPI_CHECK(_data == nullptr, ErrorCode::ERROR)
-
-                    return memory::Free(_data);
+                    
+                    memory::Free(_data);
                 }
 
-                T* GetData() { return _data; }
+                ElementType* GetData() { return _data; }
             
             private:
-                T* _data;
+                ElementType* _data;
         };
     }
 
     namespace codec
     {
-        class State
-        {};
+        struct CodecResult
+        {
+            result ReturnedCode;
+            usize OutputByteWidth;
+        };
+
+        class Codec_Interface
+        {
+            public:
+                virtual void Compress(const uint8* src, uint8* dest, const usize byteWidth, CodecResult* const codecResult) = 0;
+                virtual void Decompress(const uint8* src, uint8* dest, const usize byteWidth, CodecResult* const codecResult) = 0;
+
+                cpword GetUniqueType() { return ((cpword*)this)[0]; }
+        };
+
+        class Instance
+        {
+            public:
+                explicit Instance() {}
+                ~Instance() {}
+        };
     }
 
     namespace debug
