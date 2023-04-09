@@ -1,0 +1,3 @@
+C:/Users/USER100/Documents/GitHub_Projects/zapi/build/CMakeFiles/zapicodec.dir
+C:/Users/USER100/Documents/GitHub_Projects/zapi/build/CMakeFiles/edit_cache.dir
+C:/Users/USER100/Documents/GitHub_Projects/zapi/build/CMakeFiles/rebuild_cache.dir

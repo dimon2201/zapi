@@ -1,0 +1,3 @@
+"C:\Program Files\CMake\bin\cmake.exe" -E rm -f CMakeFiles\zapicodec.dir/objects.a
+C:\x86_64-12.2.0-release-win32-seh-ucrt-rt_v10-rev2\mingw64\bin\ar.exe qc CMakeFiles\zapicodec.dir/objects.a @CMakeFiles\zapicodec.dir\objects1.rsp
+C:\x86_64-12.2.0-release-win32-seh-ucrt-rt_v10-rev2\mingw64\bin\c++.exe  -std=c++11 -O3 -Wl,--whole-archive CMakeFiles\zapicodec.dir/objects.a -Wl,--no-whole-archive -o zapicodec.exe -Wl,--out-implib,libzapicodec.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\zapicodec.dir\linkLibs.rsp

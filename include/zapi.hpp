@@ -1,60 +1,69 @@
-#include "zapimacros.hpp"
+#pragma once
+
 #include <cstdlib>
+#include "zapi_macros.hpp"
 
-namespace ZAPI
+namespace zapi
 {
-    template <typename T>
-    static result MemoryAlloc(const usize byteWidth) {
-        ZAPI_ASSERT(byteWidth == 0, ZAPI_FAIL)
-        return (T*)malloc(byteWidth);
+    namespace memory
+    {
+        template <typename T>
+        static T* Allocate(const usize byteWidth)
+        {
+            ZAPI_CHECK(byteWidth == 0, ErrorCode::ERROR)
+
+            return (T*)malloc(byteWidth);
+        }
+
+        static result Free(void* memory)
+        {
+            ZAPI_CHECK(memory == nullptr, ErrorCode::ERROR)
+
+            free(memory);
+
+            return OK;
+        }
+
+        static result Copy(uint8* dest, const uint8* src, const usize byteWidth)
+        {
+            ZAPI_CHECK(((dest == nullptr) || (src == nullptr) || (byteWidth == 0)), ErrorCode::ERROR)
+
+            for (cpuint i = 0; i < byteWidth; ++i) { dest[i] = src[i]; }
+
+            return OK;
+        }
     }
 
-    static result MemoryFree(void* memory) {
-        ZAPI_ASSERT(memory == nullptr, ZAPI_FAIL)
-        free(memory);
-        return ZAPI_OK;
-    }
+    namespace storage
+    {
+        template <typename T>
+        class Buffer
+        {
+            public:
+                result Init(const void* memory, const usize byteWidth)
+                {
+                    ZAPI_CHECK(memory == nullptr, ErrorCode::ERROR)
 
-    static result MemoryCopy(const void* dest, const void* src, const usize byteWidth) {
-        ZAPI_ASSERT(((dest == nullptr) || (src == nullptr) || (byteWidth == 0)), ZAPI_FAIL)
-        uint8* pDest = (uint8*)dest;
-        uint8* pSrc = (uint8*)src;
-        for (ucpuint i = 0; i < byteWidth; ++i) { pDest[i] = pSrc[i]; }
-        return ZAPI_OK;
+                    _data = memory::Allocate<T>(byteWidth);
+                    memory::Copy( _data, memory, byteWidth );
+
+                    return OK;
+                }
+
+                result Free()
+                {
+                    ZAPI_CHECK(_data == nullptr, ErrorCode::ERROR)
+
+                    return memory::Free(_data);
+                }
+
+                T* GetData() { return _data; }
+            
+            private:
+                T* _data;
+        };
     }
 
     class State
-    {
-        
-    };
-
-    template <typename T>
-    class Buffer
-    {
-        public:
-            result Init(const void* memory, const usize byteWidth) {
-                if (this->m_Buffer != nullptr) { return ZAPI_FAIL; }
-                this->m_Buffer = MemoryAlloc<T>(byteWidth);
-                MemoryCopy( this->m_Buffer, memory, byteWidth );
-                return ZAPI_OK;
-            }
-
-            result Free() {
-                if (this->m_Buffer == nullptr) { return ZAPI_FAIL; }
-                return MemoryFree(this->m_Buffer);
-            }
-
-            T* GetData() { return this->m_Data; }
-        
-        private:
-            T* m_Data;
-    };
-
-    class Codec
-    {
-        ZAPI_XMACRO_DEFINE_STATIC_CLASS(Codec)
-
-        public:
-            result Compress(State* zapiState);
-    };
+    {};
 };
