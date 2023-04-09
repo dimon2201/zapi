@@ -24,11 +24,11 @@ namespace zapi
             return OK;
         }
 
-        static result Copy(const uint8* src, uint8* dest, const usize byteWidth)
+        static result Copy(const uint8* src, uint8* dst, const usize byteWidth)
         {
-            ZAPI_CHECK(((dest == nullptr) || (src == nullptr) || (byteWidth == 0)), ErrorCode::ERROR)
+            ZAPI_CHECK(((dst == nullptr) || (src == nullptr) || (byteWidth == 0)), ErrorCode::ERROR)
 
-            for (cpuint i = 0; i < byteWidth; ++i) { dest[i] = src[i]; }
+            for (cpuint i = 0; i < byteWidth; ++i) { dst[i] = src[i]; }
 
             return OK;
         }
@@ -74,19 +74,34 @@ namespace zapi
 
     namespace codec
     {
-        struct CodecResult
+        using codec_unique_type = cpword;
+
+        struct EncoderInfo
         {
+            codec_unique_type EncoderType;
+            void* SrcData;
+            void* DstData;
+            usize SrcByteWidth;
+            usize DstByteWidth;
             result ReturnedCode;
-            usize OutputByteWidth;
+        };
+
+        struct DecoderInfo
+        {
+            void* SrcData;
+            void* DstData;
+            usize SrcByteWidth;
+            usize DstByteWidth;
+            result ReturnedCode;
         };
 
         class Codec_Interface
         {
             public:
-                virtual void Compress(const uint8* src, uint8* dest, const usize byteWidth, CodecResult* const codecResult) = 0;
-                virtual void Decompress(const uint8* src, uint8* dest, const usize byteWidth, CodecResult* const codecResult) = 0;
+                virtual void Compress(EncoderInfo* const encoderInfo) = 0;
+                virtual void Decompress(DecoderInfo* const decoderInfo) = 0;
 
-                cpword GetUniqueType() { return ((cpword*)this)[0]; }
+                codec_unique_type GetUniqueType() { return ((codec_unique_type*)this)[0]; }
         };
 
         class Instance
