@@ -76,7 +76,7 @@ namespace zapi
     {
         using codec_unique_type = cpword;
 
-        struct EncoderInfo
+        struct EncodingPassInfo
         {
             codec_unique_type EncoderType;
             void* SrcData;
@@ -86,7 +86,7 @@ namespace zapi
             result ReturnedCode;
         };
 
-        struct DecoderInfo
+        struct DecodingPassInfo
         {
             void* SrcData;
             void* DstData;
@@ -98,8 +98,8 @@ namespace zapi
         class Codec_Interface
         {
             public:
-                virtual void Compress(EncoderInfo* const encoderInfo) = 0;
-                virtual void Decompress(DecoderInfo* const decoderInfo) = 0;
+                virtual void Compress(EncodingPassInfo* const encodingPassInfo) = 0;
+                virtual void Decompress(DecodingPassInfo* const decodingPassInfo) = 0;
 
                 codec_unique_type GetUniqueType() { return ((codec_unique_type*)this)[0]; }
         };
