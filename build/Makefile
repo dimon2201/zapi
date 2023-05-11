@@ -56,10 +56,10 @@ RM = "C:\Program Files\CMake\bin\cmake.exe" -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = C:\Users\USER100\Documents\GitHub_Projects\zapi
+CMAKE_SOURCE_DIR = C:\Users\USER100\Documents\GitHub\zapi
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = C:\Users\USER100\Documents\GitHub_Projects\zapi\build
+CMAKE_BINARY_DIR = C:\Users\USER100\Documents\GitHub\zapi\build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -86,9 +86,9 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start C:\Users\USER100\Documents\GitHub_Projects\zapi\build\CMakeFiles C:\Users\USER100\Documents\GitHub_Projects\zapi\build\\CMakeFiles\progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start C:\Users\USER100\Documents\GitHub\zapi\build\CMakeFiles C:\Users\USER100\Documents\GitHub\zapi\build\\CMakeFiles\progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start C:\Users\USER100\Documents\GitHub_Projects\zapi\build\CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start C:\Users\USER100\Documents\GitHub\zapi\build\CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -116,41 +116,41 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named zapicodec
+# Target rules for targets named zapiapp
 
 # Build rule for target.
-zapicodec: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 zapicodec
-.PHONY : zapicodec
+zapiapp: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 zapiapp
+.PHONY : zapiapp
 
 # fast build rule for target.
-zapicodec/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\zapicodec.dir\build.make CMakeFiles/zapicodec.dir/build
-.PHONY : zapicodec/fast
+zapiapp/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\zapiapp.dir\build.make CMakeFiles/zapiapp.dir/build
+.PHONY : zapiapp/fast
 
-source/main.obj: source/main.cpp.obj
-.PHONY : source/main.obj
+examples/example.obj: examples/example.cpp.obj
+.PHONY : examples/example.obj
 
 # target to build an object file
-source/main.cpp.obj:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\zapicodec.dir\build.make CMakeFiles/zapicodec.dir/source/main.cpp.obj
-.PHONY : source/main.cpp.obj
+examples/example.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\zapiapp.dir\build.make CMakeFiles/zapiapp.dir/examples/example.cpp.obj
+.PHONY : examples/example.cpp.obj
 
-source/main.i: source/main.cpp.i
-.PHONY : source/main.i
+examples/example.i: examples/example.cpp.i
+.PHONY : examples/example.i
 
 # target to preprocess a source file
-source/main.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\zapicodec.dir\build.make CMakeFiles/zapicodec.dir/source/main.cpp.i
-.PHONY : source/main.cpp.i
+examples/example.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\zapiapp.dir\build.make CMakeFiles/zapiapp.dir/examples/example.cpp.i
+.PHONY : examples/example.cpp.i
 
-source/main.s: source/main.cpp.s
-.PHONY : source/main.s
+examples/example.s: examples/example.cpp.s
+.PHONY : examples/example.s
 
 # target to generate assembly for a file
-source/main.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\zapicodec.dir\build.make CMakeFiles/zapicodec.dir/source/main.cpp.s
-.PHONY : source/main.cpp.s
+examples/example.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\zapiapp.dir\build.make CMakeFiles/zapiapp.dir/examples/example.cpp.s
+.PHONY : examples/example.cpp.s
 
 # Help Target
 help:
@@ -160,10 +160,10 @@ help:
 	@echo ... depend
 	@echo ... edit_cache
 	@echo ... rebuild_cache
-	@echo ... zapicodec
-	@echo ... source/main.obj
-	@echo ... source/main.i
-	@echo ... source/main.s
+	@echo ... zapiapp
+	@echo ... examples/example.obj
+	@echo ... examples/example.i
+	@echo ... examples/example.s
 .PHONY : help
 
 

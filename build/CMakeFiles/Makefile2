@@ -53,16 +53,16 @@ RM = "C:\Program Files\CMake\bin\cmake.exe" -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = C:\Users\USER100\Documents\GitHub_Projects\zapi
+CMAKE_SOURCE_DIR = C:\Users\USER100\Documents\GitHub\zapi
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = C:\Users\USER100\Documents\GitHub_Projects\zapi\build
+CMAKE_BINARY_DIR = C:\Users\USER100\Documents\GitHub\zapi\build
 
 #=============================================================================
 # Directory level rules for the build root directory
 
 # The main recursive "all" target.
-all: CMakeFiles/zapicodec.dir/all
+all: CMakeFiles/zapiapp.dir/all
 .PHONY : all
 
 # The main recursive "preinstall" target.
@@ -70,34 +70,34 @@ preinstall:
 .PHONY : preinstall
 
 # The main recursive "clean" target.
-clean: CMakeFiles/zapicodec.dir/clean
+clean: CMakeFiles/zapiapp.dir/clean
 .PHONY : clean
 
 #=============================================================================
-# Target rules for target CMakeFiles/zapicodec.dir
+# Target rules for target CMakeFiles/zapiapp.dir
 
 # All Build rule for target.
-CMakeFiles/zapicodec.dir/all:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\zapicodec.dir\build.make CMakeFiles/zapicodec.dir/depend
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\zapicodec.dir\build.make CMakeFiles/zapicodec.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=C:\Users\USER100\Documents\GitHub_Projects\zapi\build\CMakeFiles --progress-num=1,2 "Built target zapicodec"
-.PHONY : CMakeFiles/zapicodec.dir/all
+CMakeFiles/zapiapp.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\zapiapp.dir\build.make CMakeFiles/zapiapp.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\zapiapp.dir\build.make CMakeFiles/zapiapp.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=C:\Users\USER100\Documents\GitHub\zapi\build\CMakeFiles --progress-num=1,2 "Built target zapiapp"
+.PHONY : CMakeFiles/zapiapp.dir/all
 
 # Build rule for subdir invocation for target.
-CMakeFiles/zapicodec.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start C:\Users\USER100\Documents\GitHub_Projects\zapi\build\CMakeFiles 2
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 CMakeFiles/zapicodec.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start C:\Users\USER100\Documents\GitHub_Projects\zapi\build\CMakeFiles 0
-.PHONY : CMakeFiles/zapicodec.dir/rule
+CMakeFiles/zapiapp.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start C:\Users\USER100\Documents\GitHub\zapi\build\CMakeFiles 2
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 CMakeFiles/zapiapp.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start C:\Users\USER100\Documents\GitHub\zapi\build\CMakeFiles 0
+.PHONY : CMakeFiles/zapiapp.dir/rule
 
 # Convenience name for target.
-zapicodec: CMakeFiles/zapicodec.dir/rule
-.PHONY : zapicodec
+zapiapp: CMakeFiles/zapiapp.dir/rule
+.PHONY : zapiapp
 
 # clean rule for target.
-CMakeFiles/zapicodec.dir/clean:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\zapicodec.dir\build.make CMakeFiles/zapicodec.dir/clean
-.PHONY : CMakeFiles/zapicodec.dir/clean
+CMakeFiles/zapiapp.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\zapiapp.dir\build.make CMakeFiles/zapiapp.dir/clean
+.PHONY : CMakeFiles/zapiapp.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.
