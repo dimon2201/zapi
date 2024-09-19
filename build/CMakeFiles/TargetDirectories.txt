@@ -1,3 +1,6 @@
-C:/Users/USER100/Documents/GitHub/zapi/build/CMakeFiles/zapiapp.dir
-C:/Users/USER100/Documents/GitHub/zapi/build/CMakeFiles/edit_cache.dir
-C:/Users/USER100/Documents/GitHub/zapi/build/CMakeFiles/rebuild_cache.dir
+C:/DDD/zapi/build/CMakeFiles/ALL_BUILD.dir
+C:/DDD/zapi/build/CMakeFiles/ZERO_CHECK.dir
+C:/DDD/zapi/build/src/CMakeFiles/zapi.dir
+C:/DDD/zapi/build/src/CMakeFiles/ALL_BUILD.dir
+C:/DDD/zapi/build/examples/CMakeFiles/zapi_examples.dir
+C:/DDD/zapi/build/examples/CMakeFiles/ALL_BUILD.dir
