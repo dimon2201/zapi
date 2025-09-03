@@ -117,8 +117,14 @@ namespace zapi
     {
 		enum class Type
 		{
-			ZAP_FAST
+			NONE = 0,
+			ENCODE = 1,
+			DECODE = 2,
+			ZAP_FAST = 4
 		};
+		inline Type operator|(Type lhs, Type rhs) { return (Type)((dword)lhs | (dword)rhs); }
+		inline Type operator&(Type lhs, Type rhs) { return (Type)((dword)lhs & (dword)rhs); }
+		inline bool operator&&(Type lhs, Type rhs) { return (dword)lhs && (dword)rhs; }
 		
 		typedef struct State
 		{
@@ -129,16 +135,18 @@ namespace zapi
 			size dstByteSize;
 			zapi::storage::MemAlloc<u32> hashTable;
 			size hashTableByteSize;
+			boolean debugOutput;
 		} State;
 		
 		zapi::storage::MemAlloc<State> CreateState(
 			const Type codec,
 			const zapi::u8* const srcData,
 			const size srcByteSize,
-			const size maxDstByteSize
+			const size maxDstByteSize,
+			const boolean debugOutput
 		);
 		void DestroyState(zapi::storage::MemAlloc<State>& state);
-		void Encode(zapi::storage::MemAlloc<State>& state);
+		void Codec(zapi::storage::MemAlloc<State>& state);
     }
 	
 	namespace utils

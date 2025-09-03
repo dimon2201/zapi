@@ -172,7 +172,8 @@ zapi::storage::MemAlloc<zapi::codec::State> zapi::codec::CreateState(
 	const zapi::codec::Type codec,
 	const zapi::u8* const srcData,
 	const size srcByteSize,
-	const size maxDstByteSize
+	const size maxDstByteSize,
+	const boolean debugOutput
 )
 {
 	const size hashTableByteSize = 65536 * 4;
@@ -187,6 +188,7 @@ zapi::storage::MemAlloc<zapi::codec::State> zapi::codec::CreateState(
 	stateMem->dstByteSize = 0;
 	stateMem->hashTable = zapi::storage::Allocate<u32>(hashTableByteSize, cacheLineSize, TRUE);
 	stateMem->hashTableByteSize = hashTableByteSize;
+	stateMem->debugOutput = debugOutput;
 	
 	return state;
 }
@@ -198,8 +200,9 @@ void zapi::codec::DestroyState(zapi::storage::MemAlloc<zapi::codec::State>& stat
 	zapi::storage::Deallocate(stateMem->hashTable);
 }
 
-void zapi::codec::Encode(zapi::storage::MemAlloc<State>& state)
+void zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 {
+	// Extract state data
 	Type codec = state.mem->codec;
 	u8* src = (u8*)state.mem->srcData;
     u8* dst = (u8*)state.mem->dstData.mem;
@@ -208,19 +211,23 @@ void zapi::codec::Encode(zapi::storage::MemAlloc<State>& state)
 	size hashTableDWordSize = hashTableByteSize >> 2;
 	size hashTableMask = hashTableDWordSize - 1ull;
 	u32* hashTable = state.mem->hashTable.mem;
+	boolean debugOutput = state.mem->debugOutput;
 	
-	if (codec == Type::ZAP_FAST)
+	if (codec & Type::ZAP_FAST && codec & Type::ENCODE)
 	{
-		/* ZAP Codec */
+		/* Zap Encoding */
 		
 		// Initialize
 		const u8* src8 = (const u8*)src;
 		const u8* const lastSrc8 = (const u8* const)(src8 + srcByteSize);
-		size dstByteSize = 0;
+		u8* dst8 = dst;
 		for (size i = 0; i < hashTableDWordSize; i++)
 			hashTable[i] = 0;
-		size controlPos = dstByteSize++;
+		u32* const controlCountPos = (u32* const)dst8;
+		dst8 += 4;
+		u8* controlPos = dst8++;
 		size controlBitSize = 0;
+		u32 controlCount = 0;
 		
 		// Time recording
 		auto start_1 = zapi::time::Now();
@@ -252,40 +259,135 @@ void zapi::codec::Encode(zapi::storage::MemAlloc<State>& state)
 				// Output
 				if (bytes1 == hashTableBytes1) {
 					control |= 1 << controlBitSize++;
-					((u16*)&dst[dstByteSize])[0] = hash1;
-					dstByteSize += 2;
+					((u16*)dst8)[0] = hash1;
+					dst8 += 2;
 				} else {
 					controlBitSize++;
-					((dword*)&dst[dstByteSize])[0] = bytes1;
-					dstByteSize += 4;
+					((dword*)dst8)[0] = bytes1;
+					dst8 += 4;
 				}
 				if (bytes2 == hashTableBytes2) {
 					control |= 1 << controlBitSize++;
-					((u16*)&dst[dstByteSize])[0] = hash2;
-					dstByteSize += 2;
+					((u16*)dst8)[0] = hash2;
+					dst8 += 2;
 				} else {
 					controlBitSize++;
-					((dword*)&dst[dstByteSize])[0] = bytes2;
-					dstByteSize += 4;
+					((dword*)dst8)[0] = bytes2;
+					dst8 += 4;
 				}
 			}
 			
 			// Finish control output
-			dst[controlPos] = control;
-			controlPos = dstByteSize++;
+			*controlPos = control;
+			controlPos = dst8++;
+			controlCount++;
 			
 			// Move to next block
 			src8 += 32;
 		}
+		
+		// Write control count for decoding
+		*controlCountPos = controlCount;
+		
 		auto end_1 = zapi::time::Now();
 		
 		// Output to codec state
-		state.mem->dstByteSize = dstByteSize;
+		state.mem->dstByteSize = (size)dst8 - (size)dst;
 		
-		std::cout << "Zap default: " << zapi::time::Milliseconds(start_1, end_1) << " ms" <<std::endl;
+		// Debug console output
+		if (debugOutput == TRUE)
+		{
+			zapi::io::Print("Codec: " + std::to_string((size)state.mem->codec), TRUE);
+			zapi::io::Print("Encoded " + std::to_string(state.mem->srcByteSize) + " to " + std::to_string(state.mem->dstByteSize) + " bytes", TRUE);
+			zapi::io::Print("Ratio: " + std::to_string((float)state.mem->srcByteSize / (float)state.mem->dstByteSize), TRUE);
+			zapi::io::Print("Time: " + std::to_string(zapi::time::Milliseconds(start_1, end_1)) + " ms", TRUE);
+		}
 	}
+	else if (codec & Type::ZAP_FAST && codec & Type::DECODE)
+	{
+		/* Zap Decoding */
+		
+		// Initialize
+		const u8* src8 = (const u8*)src;
+		const u8* const lastSrc8 = (const u8* const)(src8 + srcByteSize);
+		dword* dst32 = (dword*)dst;
+		for (size i = 0; i < hashTableDWordSize; i++)
+			hashTable[i] = 0;
+		u32 controlCount = ((u32*)src8)[0];
+		src8 += 4;
+		const u8* controlPos = src8++;
+		size controlBitSize = 0;
+		
+		// Time recording
+		auto start_1 = zapi::time::Now();
+		
+		// Loop
+		for (;;)
+		{
+			// Check for boundary
+			if (controlCount == 0)
+				break;
+			
+			const u8 control = *controlPos;
+			for (size i = 0; i < 8; i++)
+			{
+				qword bit = (control >> i) & 1;
+				
+				if (!bit)
+				{
+					dword bytes = ((dword*)src8)[0];
+					src8 += 4;
+					*dst32 = bytes;
+					
+					const qword hash = ((bytes * 0x9e3779b9ull) >> 32ull) & hashTableMask;
+					hashTable[hash] = *dst32++;
+				}
+				else if (bit)
+				{
+					dword hash = ((u16*)src8)[0];
+					src8 += 2;
+					*dst32 = hashTable[hash];
+				}
+			}
+			
+			// Finish control output
+			controlPos = src8++;
+			controlCount--;
+		}
+		auto end_1 = zapi::time::Now();
+		
+		// Output to codec state
+		state.mem->dstByteSize = (size)dst32 - (size)dst;
+		
+		// Debug console output
+		if (debugOutput == TRUE)
+		{
+			zapi::io::Print("Codec: " + std::to_string((dword)state.mem->codec), TRUE);
+			zapi::io::Print("Encoded " + std::to_string(state.mem->srcByteSize) + " to " + std::to_string(state.mem->dstByteSize) + " bytes", TRUE);
+			zapi::io::Print("Ratio: " + std::to_string((float)state.mem->srcByteSize / (float)state.mem->dstByteSize), TRUE);
+			zapi::io::Print("Time: " + std::to_string(zapi::time::Milliseconds(start_1, end_1)) + " ms", TRUE);
+		}
+	}
+}
+
+zapi::size zapi::utils::GetCacheLineSize()
+{
+	int lineSize = 0;
 	
-    /*u8* src = (u8*)srcData;
+#ifdef _MSC_VER
+    int cpuInfo[4];
+    __cpuid(cpuInfo, 1);
+    lineSize = ((cpuInfo[1] >> 8) & 0xFF) * 8;
+#else
+    unsigned int eax, ebx, ecx, edx;
+    __cpuid(1, eax, ebx, ecx, edx);
+    lineSize = ((ebx >> 8) & 0xFF) * 8;
+#endif
+
+	return (size)lineSize;
+}
+
+/*u8* src = (u8*)srcData;
     u8* dst = (u8*)dstData;
 	
 	size hashTableSize = 65536;
@@ -349,21 +451,3 @@ void zapi::codec::Encode(zapi::storage::MemAlloc<State>& state)
 	}
 	auto end_1 = zapi::time::Now();
 	std::cout << "Zap default: " << zapi::time::Milliseconds(start_1, end_1) << " ms" <<std::endl;*/
-}
-
-zapi::size zapi::utils::GetCacheLineSize()
-{
-	int lineSize = 0;
-	
-#ifdef _MSC_VER
-    int cpuInfo[4];
-    __cpuid(cpuInfo, 1);
-    lineSize = ((cpuInfo[1] >> 8) & 0xFF) * 8;
-#else
-    unsigned int eax, ebx, ecx, edx;
-    __cpuid(1, eax, ebx, ecx, edx);
-    lineSize = ((ebx >> 8) & 0xFF) * 8;
-#endif
-
-	return (size)lineSize;
-}
