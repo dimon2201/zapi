@@ -226,7 +226,6 @@ void zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 		u32* const controlCountPos = (u32* const)dst8;
 		dst8 += 4;
 		u8* controlPos = dst8++;
-		size controlBitSize = 0;
 		u32 controlCount = 0;
 		
 		// Time recording
@@ -244,6 +243,7 @@ void zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 			
 			// Encoding
 			size control = 0;
+			size controlBitSize = 0;
 			for (size j = 0; j < 8; j += 2)
 			{
 				// Extract two 4-byte words and hash it
@@ -316,7 +316,6 @@ void zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 		u32 controlCount = ((u32*)src8)[0];
 		src8 += 4;
 		const u8* controlPos = src8++;
-		size controlBitSize = 0;
 		
 		// Time recording
 		auto start_1 = zapi::time::Now();
@@ -328,6 +327,7 @@ void zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 			if (controlCount == 0)
 				break;
 			
+			// Decoding
 			const u8 control = *controlPos;
 			for (size i = 0; i < 8; i++)
 			{
@@ -337,16 +337,16 @@ void zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 				{
 					dword bytes = ((dword*)src8)[0];
 					src8 += 4;
-					*dst32 = bytes;
+					*dst32++ = bytes;
 					
 					const qword hash = ((bytes * 0x9e3779b9ull) >> 32ull) & hashTableMask;
-					hashTable[hash] = *dst32++;
+					hashTable[hash] = bytes;
 				}
 				else if (bit)
 				{
 					dword hash = ((u16*)src8)[0];
 					src8 += 2;
-					*dst32 = hashTable[hash];
+					*dst32++ = hashTable[hash];
 				}
 			}
 			
