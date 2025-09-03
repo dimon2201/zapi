@@ -36,7 +36,8 @@ int main()
 		inFile.Data().byteSize,
 		zapi::TRUE
 	);
-    zapi::codec::Codec(encState);
+    auto encResult = zapi::codec::Codec(encState);
+	zapi::io::Print(zapi::codec::ResultToString(encResult), zapi::TRUE);
     zapi::io::File outFile("C:/DDD/zapi/data/enwik8_out", encState.mem->dstData.mem, encState.mem->dstByteSize);
 	
 	auto decState = zapi::codec::CreateState(
@@ -46,8 +47,15 @@ int main()
 		encState.mem->srcByteSize,
 		zapi::TRUE
 	);
-	zapi::codec::Codec(decState);
+	auto decResult = zapi::codec::Codec(decState);
+	zapi::io::Print(zapi::codec::ResultToString(decResult), zapi::TRUE);
 	zapi::io::File outDecFile("C:/DDD/zapi/data/enwik8_out_dec", decState.mem->dstData.mem, decState.mem->dstByteSize);
+	
+	/*auto start_1 = zapi::time::Now();
+	auto result = density_compress((const uint8_t*)inFile.Data().mem, inFile.ByteSize(), (uint8_t*)encState.mem->dstData.mem, inFile.ByteSize(), DENSITY_ALGORITHM_CHAMELEON);
+	auto end_1 = zapi::time::Now();
+	std::cout << "Density : " << zapi::time::Milliseconds(start_1, end_1) << " ms" << std::endl;
+	std::cout << "Ratio: " << (float)result.bytesRead / (float)result.bytesWritten << std::endl;*/
 	
     return 0;
 }

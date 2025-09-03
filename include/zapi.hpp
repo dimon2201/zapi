@@ -126,6 +126,14 @@ namespace zapi
 		inline Type operator&(Type lhs, Type rhs) { return (Type)((dword)lhs & (dword)rhs); }
 		inline bool operator&&(Type lhs, Type rhs) { return (dword)lhs && (dword)rhs; }
 		
+		enum class Result
+		{
+			ERROR_SMALL_INPUT = 0,
+			ERROR_SMALL_DESTINATION = 1,
+			ERROR_DESTINATION_OVERFLOW = 2,
+			SUCCESS = 3
+		};
+		
 		typedef struct State
 		{
 			Type codec;
@@ -133,11 +141,13 @@ namespace zapi
 			zapi::storage::MemAlloc<u8> dstData;
 			size srcByteSize;
 			size dstByteSize;
+			size dstMaxByteSize;
 			zapi::storage::MemAlloc<u32> hashTable;
 			size hashTableByteSize;
 			boolean debugOutput;
 		} State;
 		
+		std::string ResultToString(const Result& result);
 		zapi::storage::MemAlloc<State> CreateState(
 			const Type codec,
 			const zapi::u8* const srcData,
@@ -146,7 +156,7 @@ namespace zapi
 			const boolean debugOutput
 		);
 		void DestroyState(zapi::storage::MemAlloc<State>& state);
-		void Codec(zapi::storage::MemAlloc<State>& state);
+		Result Codec(zapi::storage::MemAlloc<State>& state);
     }
 	
 	namespace utils

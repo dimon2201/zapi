@@ -168,6 +168,23 @@ void pollute(volatile zapi::u8* polluter, zapi::size byteSize)
 	pollute(&polluter[0], cachesByteSize);
 }*/
 
+std::string zapi::codec::ResultToString(const zapi::codec::Result& result)
+{
+	switch (result)
+	{
+		case Result::ERROR_SMALL_INPUT:
+			return "Error: small input buffer";
+		case Result::ERROR_SMALL_DESTINATION:
+			return "Error: small destination buffer";
+		case Result::ERROR_DESTINATION_OVERFLOW:
+			return "Error: destination buffer overflow";
+		case Result::SUCCESS:
+			return "Success";
+		default:
+			return "None";
+	}
+}
+
 zapi::storage::MemAlloc<zapi::codec::State> zapi::codec::CreateState(
 	const zapi::codec::Type codec,
 	const zapi::u8* const srcData,
@@ -186,6 +203,7 @@ zapi::storage::MemAlloc<zapi::codec::State> zapi::codec::CreateState(
 	stateMem->dstData = zapi::storage::Allocate<u8>(maxDstByteSize, 0, FALSE);
 	stateMem->srcByteSize = srcByteSize;
 	stateMem->dstByteSize = 0;
+	stateMem->dstMaxByteSize = maxDstByteSize;
 	stateMem->hashTable = zapi::storage::Allocate<u32>(hashTableByteSize, cacheLineSize, TRUE);
 	stateMem->hashTableByteSize = hashTableByteSize;
 	stateMem->debugOutput = debugOutput;
@@ -200,13 +218,14 @@ void zapi::codec::DestroyState(zapi::storage::MemAlloc<zapi::codec::State>& stat
 	zapi::storage::Deallocate(stateMem->hashTable);
 }
 
-void zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
+zapi::codec::Result zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 {
 	// Extract state data
 	Type codec = state.mem->codec;
 	u8* src = (u8*)state.mem->srcData;
     u8* dst = (u8*)state.mem->dstData.mem;
 	size srcByteSize = state.mem->srcByteSize;
+	size dstMaxByteSize = state.mem->dstMaxByteSize;
 	size hashTableByteSize = state.mem->hashTableByteSize;
 	size hashTableDWordSize = hashTableByteSize >> 2;
 	size hashTableMask = hashTableDWordSize - 1ull;
@@ -217,6 +236,12 @@ void zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 	{
 		/* Zap Encoding */
 		
+		// Checks
+		if (srcByteSize < 32)
+			return Result::ERROR_SMALL_INPUT;
+		if (dstMaxByteSize < 38)
+			return Result::ERROR_SMALL_DESTINATION;
+		
 		// Initialize
 		const u8* src8 = (const u8*)src;
 		const u8* const lastSrc8 = (const u8* const)(src8 + srcByteSize);
@@ -225,6 +250,7 @@ void zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 			hashTable[i] = 0;
 		u32* const controlCountPos = (u32* const)dst8;
 		dst8 += 4;
+		u8* const controlLast = (u8* const)dst8++;
 		u8* controlPos = dst8++;
 		u32 controlCount = 0;
 		
@@ -234,9 +260,20 @@ void zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 		// Loop
 		for (;;)
 		{
-			// Check for boundary
-			if (src8 >= lastSrc8)
+			// Check for loop exit
+			size scrBytesLeft = (size)lastSrc8 - (size)src8;
+			if (scrBytesLeft < 32)
+			{
+				*controlLast = scrBytesLeft;
+				memcpy(dst8, src8, scrBytesLeft);
+				dst8 += scrBytesLeft;
 				break;
+			}
+			
+			// Check for destination buffer overflow
+			size dstBytesLeft = (size)dst8 - (size)dst;
+			if (dstBytesLeft >= dstMaxByteSize)
+				return Result::ERROR_DESTINATION_OVERFLOW;
 			
 			// Get 32-byte block
 			const dword* const block = (const dword* const)src8;
@@ -315,6 +352,7 @@ void zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 			hashTable[i] = 0;
 		u32 controlCount = ((u32*)src8)[0];
 		src8 += 4;
+		u8 controlLast = *src8++;
 		const u8* controlPos = src8++;
 		
 		// Time recording
@@ -356,8 +394,12 @@ void zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 		}
 		auto end_1 = zapi::time::Now();
 		
+		// Emit last bytes
+		size srcBytesLeft = controlLast;
+		memcpy(dst32, src8, srcBytesLeft);
+		
 		// Output to codec state
-		state.mem->dstByteSize = (size)dst32 - (size)dst;
+		state.mem->dstByteSize = ((size)dst32 - (size)dst) + srcBytesLeft;
 		
 		// Debug console output
 		if (debugOutput == TRUE)
@@ -368,6 +410,8 @@ void zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 			zapi::io::Print("Time: " + std::to_string(zapi::time::Milliseconds(start_1, end_1)) + " ms", TRUE);
 		}
 	}
+	
+	return Result::SUCCESS;
 }
 
 zapi::size zapi::utils::GetCacheLineSize()
