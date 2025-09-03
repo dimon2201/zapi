@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.5)
+project(zapi_examples)
+set(SOURCE_FILES example.cpp)
+add_executable(zapi_examples ${SOURCE_FILES})
+target_include_directories(zapi_examples PUBLIC ../include)
+target_link_directories(zapi_examples PUBLIC ../lib)
+target_link_libraries(zapi_examples zapi)

@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.5)
+project(zapi)
+file(GLOB_RECURSE zapi_sources "*.c" "*.cc" "*.cpp")
+add_library(zapi STATIC ${zapi_sources})
+target_include_directories(zapi PUBLIC ../include)
+target_compile_options(zapi PUBLIC -g)

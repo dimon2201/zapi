@@ -1,5 +1,6 @@
 #include <iostream>
 #include "zapi.hpp"
+#include "../src/density/density_api.h"
 
 /*void EncodeFile(const char* inputFileName, const char* outputFileName)
 {
@@ -28,19 +29,24 @@
 int main()
 {
     zapi::io::File inFile("C:/DDD/zapi/data/enwik8");
-    void* outData = zapi::storage::Allocate(inFile.ByteSize(), zapi::TRUE);
-    zapi::size outByteSize = 0;
-    zapi::codec::ZapEncoder encoder(
-        inFile.Data(),
-        outData,
-        inFile.ByteSize(),
-        outByteSize,
-        inFile.ByteSize(),
-        zapi::codec::ZapEncoder::Codec::FAST
-    );
-    zapi::io::File outFile("C:/DDD/zapi/data/enwik8_out", outData, outByteSize);
-    
-    system("pause");
-
+	auto state = zapi::codec::CreateState(
+		zapi::codec::Type::ZAP_FAST,
+		(zapi::u8*)inFile.Data().mem,
+		inFile.Data().byteSize,
+		inFile.Data().byteSize
+	);
+    zapi::codec::Encode(state);
+	
+	auto start_1 = zapi::time::Now();
+	//density_compress((const uint8_t*)inFile.Data(), inFile.ByteSize(), (uint8_t*)outData, inFile.ByteSize(), DENSITY_ALGORITHM_CHAMELEON);
+	auto end_1 = zapi::time::Now();
+	//std::cout << "Density : " << zapi::time::Milliseconds(start_1, end_1) << " ms" << std::endl;
+	
+    zapi::io::File outFile("C:/DDD/zapi/data/enwik8_out", state.mem->dstData.mem, state.mem->dstByteSize);
+	
+	zapi::codec::DestroyState(state);
+	
+	zapi::io::Print("Success!", zapi::TRUE);
+	
     return 0;
 }
