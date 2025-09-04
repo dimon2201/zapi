@@ -18,3 +18,11 @@ typedef struct Args
 u64 SomeFunction(
 	const Args* args
 );
+
+u64 CompressorEncode(
+	const Args* args
+);
+
+u64 LZCompress(
+	const Args* args
+);

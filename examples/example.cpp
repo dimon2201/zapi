@@ -30,7 +30,7 @@ int main()
 {
     zapi::io::File inFile("C:/DDD/zapi/data/enwik8");
 	auto encState = zapi::codec::CreateState(
-		zapi::codec::Type::XLZ | zapi::codec::Type::ENCODE,
+		zapi::codec::Type::EXPERIMENT | zapi::codec::Type::ENCODE,
 		(zapi::u8*)inFile.Data().mem,
 		inFile.Data().byteSize,
 		inFile.Data().byteSize,
@@ -40,7 +40,7 @@ int main()
 	zapi::io::Print(zapi::codec::ResultToString(encResult), zapi::TRUE);
     zapi::io::File outFile("C:/DDD/zapi/data/enwik8_out", encState.mem->dstData.mem, encState.mem->dstByteSize);
 	
-	auto decState = zapi::codec::CreateState(
+	/*auto decState = zapi::codec::CreateState(
 		zapi::codec::Type::XLZ | zapi::codec::Type::DECODE,
 		(zapi::u8*)encState.mem->dstData.mem,
 		encState.mem->dstByteSize,
@@ -49,7 +49,7 @@ int main()
 	);
 	auto decResult = zapi::codec::Codec(decState);
 	zapi::io::Print(zapi::codec::ResultToString(decResult), zapi::TRUE);
-	zapi::io::File outDecFile("C:/DDD/zapi/data/enwik8_out_dec", decState.mem->dstData.mem, decState.mem->dstByteSize);
+	zapi::io::File outDecFile("C:/DDD/zapi/data/enwik8_out_dec", decState.mem->dstData.mem, decState.mem->dstByteSize);*/
 	
 	/*auto start_1 = zapi::time::Now();
 	auto result = density_compress((const uint8_t*)inFile.Data().mem, inFile.ByteSize(), (uint8_t*)encState.mem->dstData.mem, inFile.ByteSize(), DENSITY_ALGORITHM_CHAMELEON);

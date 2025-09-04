@@ -121,7 +121,8 @@ namespace zapi
 			ENCODE = 1,
 			DECODE = 2,
 			ZAP_FAST = 4,
-			XLZ = 8
+			XLZ = 8,
+			EXPERIMENT = 16
 		};
 		inline Type operator|(Type lhs, Type rhs) { return (Type)((dword)lhs | (dword)rhs); }
 		inline Type operator&(Type lhs, Type rhs) { return (Type)((dword)lhs & (dword)rhs); }
@@ -164,5 +165,14 @@ namespace zapi
 	namespace utils
 	{
 		size GetCacheLineSize();
+	}
+	
+	inline uint16_t hash16(uint64_t x) {
+		x ^= x >> 33;
+		x *= 0xff51afd7ed558ccdULL;
+		x ^= x >> 33;
+		x *= 0xc4ceb9fe1a85ec53ULL;
+		x ^= x >> 33;
+		return (uint16_t)(x >> 48);
 	}
 }

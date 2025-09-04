@@ -8,14 +8,14 @@
 
 int main()
 {
-	const u64 K_SIZE = 1024 * 1024 * 1024;
+	const u64 K_SIZE = 100 * 1024 * 1024;
 	
 	Args args;
 	args.srcData = (qword)_aligned_malloc(K_SIZE, 64);
 	args.dstData = (qword)_aligned_malloc(K_SIZE, 64);
 	args.srcDataByteSize = K_SIZE;
 	args.dstDataMaxByteSize = K_SIZE;
-	args.workMemory = 0;
+	args.workMemory = (qword)_aligned_malloc(65536 * 4, 64);
 	args.codecInfo = 0;
 	const Args* pArgs = &args;
 	
@@ -25,7 +25,7 @@ int main()
 	clock_t e;
 	s = clock();
 	u64 result = 0;
-	result += SomeFunction( pArgs );
+	result += CompressorEncode( pArgs );
 	//printf("Asm : %f\n", (double)result / 10.0);
 	e = clock();
 	printf("Assembly : %f\n", (e - s) / (double)CLOCKS_PER_SEC);

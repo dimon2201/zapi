@@ -239,9 +239,10 @@ zapi::codec::Result zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 	u32* hashTable = state.mem->hashTable.mem;
 	boolean debugOutput = state.mem->debugOutput;
 	
+	// Choose coder
 	if (codec & Type::ZAP_FAST && codec & Type::ENCODE)
 	{
-		/* Zap Encoding */
+		// Zap encoder
 		
 		// Constants
 		constexpr size blockByteSize = 32;
@@ -353,7 +354,7 @@ zapi::codec::Result zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 	}
 	else if (codec & Type::ZAP_FAST && codec & Type::DECODE)
 	{
-		/* Zap Decoding */
+		// Zap decoder
 		
 		// Initialize
 		const u8* src8 = (const u8*)src;
@@ -425,7 +426,7 @@ zapi::codec::Result zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 	}
 	else if (codec & Type::XLZ && codec & Type::ENCODE)
 	{
-		/* XLZ Encoding */
+		// XLZ encoder
 		
 		// Initialize
 		const u8* src8 = (const u8*)src;
@@ -562,7 +563,7 @@ zapi::codec::Result zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 	}
 	else if (codec & Type::XLZ && codec & Type::DECODE)
 	{
-		/* XLZ Decoding */
+		// XLZ decoder
 		
 		// Initialize
 		const u8* src8 = (const u8*)src;
@@ -629,6 +630,66 @@ zapi::codec::Result zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 					*dst8++ = *ptr++;
 				
 				token = *src8++;
+			}
+		}
+		
+		// Time recording
+		auto end_1 = zapi::time::Now();
+		
+		// Output to codec state
+		state.mem->dstByteSize = dst8 - dst;
+		
+		// Debug console output
+		if (debugOutput == TRUE)
+		{
+			zapi::io::Print("Codec: " + std::to_string((dword)state.mem->codec), TRUE);
+			zapi::io::Print("Decoded " + std::to_string(state.mem->srcByteSize) + " to " + std::to_string(state.mem->dstByteSize) + " bytes", TRUE);
+			zapi::io::Print("Ratio: " + std::to_string((float)state.mem->srcByteSize / (float)state.mem->dstByteSize), TRUE);
+			zapi::io::Print("Time: " + std::to_string(zapi::time::Milliseconds(start_1, end_1)) + " ms", TRUE);
+		}
+	}
+	else if (codec & Type::EXPERIMENT && codec & Type::ENCODE)
+	{
+		// EXPERIMENT
+		
+		// Initialize
+		const u8* src8 = (const u8*)src;
+		const u8* const lastSrc8 = (const u8* const)(src8 + srcByteSize);
+		u8* dst8 = (u8*)dst;
+		
+		qword ht[65536] = {};
+		
+		// Time recording
+		auto start_1 = zapi::time::Now();
+		
+		// Loop
+		qword bitBuffer = 0;
+		size bitBufferBitSize = 0;
+		u8* control = dst8++;
+		size controlBitSize = 0;
+		for (; src8 < lastSrc8;)
+		{
+			const qword word = *(qword*)src8;
+			const u16 hash = hash16(word);
+			const qword hashWord = ht[hash];
+			ht[hash] = word;
+			
+			if (word == hashWord)
+			{
+				controlBitSize++;
+				dst8 += 8;
+				src8 += 8;
+			}
+			else
+			{
+				controlBitSize++;
+				dst8++;
+				src8++;
+			}
+			if (controlBitSize == 8)
+			{
+				controlBitSize = 0;
+				control = dst8++;
 			}
 		}
 		
