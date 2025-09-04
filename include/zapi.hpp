@@ -120,7 +120,8 @@ namespace zapi
 			NONE = 0,
 			ENCODE = 1,
 			DECODE = 2,
-			ZAP_FAST = 4
+			ZAP_FAST = 4,
+			XLZ = 8
 		};
 		inline Type operator|(Type lhs, Type rhs) { return (Type)((dword)lhs | (dword)rhs); }
 		inline Type operator&(Type lhs, Type rhs) { return (Type)((dword)lhs & (dword)rhs); }
@@ -144,6 +145,7 @@ namespace zapi
 			size dstMaxByteSize;
 			zapi::storage::MemAlloc<u32> hashTable;
 			size hashTableByteSize;
+			size hashTableSize;
 			boolean debugOutput;
 		} State;
 		

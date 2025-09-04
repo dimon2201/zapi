@@ -193,7 +193,13 @@ zapi::storage::MemAlloc<zapi::codec::State> zapi::codec::CreateState(
 	const boolean debugOutput
 )
 {
-	const size hashTableByteSize = 65536 * 4;
+	size hashTableByteSize = 65536 * 4;
+	size hashTableSize = 65536;
+	if ((codec & Type::XLZ) == Type::XLZ)
+	{
+		hashTableByteSize = 65536 * 8;
+		hashTableSize = 65536;
+	}
 	
 	size cacheLineSize = zapi::utils::GetCacheLineSize();
 	zapi::storage::MemAlloc<State> state = zapi::storage::Allocate<State>(sizeof(State), cacheLineSize, TRUE);
@@ -206,6 +212,7 @@ zapi::storage::MemAlloc<zapi::codec::State> zapi::codec::CreateState(
 	stateMem->dstMaxByteSize = maxDstByteSize;
 	stateMem->hashTable = zapi::storage::Allocate<u32>(hashTableByteSize, cacheLineSize, TRUE);
 	stateMem->hashTableByteSize = hashTableByteSize;
+	stateMem->hashTableSize = hashTableSize;
 	stateMem->debugOutput = debugOutput;
 	
 	return state;
@@ -227,8 +234,8 @@ zapi::codec::Result zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 	size srcByteSize = state.mem->srcByteSize;
 	size dstMaxByteSize = state.mem->dstMaxByteSize;
 	size hashTableByteSize = state.mem->hashTableByteSize;
-	size hashTableDWordSize = hashTableByteSize >> 2;
-	size hashTableMask = hashTableDWordSize - 1ull;
+	size hashTableSize = state.mem->hashTableSize;
+	size hashTableMask = hashTableSize - 1ull;
 	u32* hashTable = state.mem->hashTable.mem;
 	boolean debugOutput = state.mem->debugOutput;
 	
@@ -236,17 +243,22 @@ zapi::codec::Result zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 	{
 		/* Zap Encoding */
 		
+		// Constants
+		constexpr size blockByteSize = 32;
+		constexpr size wordCountPerBlock = blockByteSize / 4;
+		constexpr size dstBufferMinByteSize = 38;
+		
 		// Checks
-		if (srcByteSize < 32)
+		if (srcByteSize < blockByteSize)
 			return Result::ERROR_SMALL_INPUT;
-		if (dstMaxByteSize < 38)
+		if (dstMaxByteSize < dstBufferMinByteSize)
 			return Result::ERROR_SMALL_DESTINATION;
 		
 		// Initialize
 		const u8* src8 = (const u8*)src;
 		const u8* const lastSrc8 = (const u8* const)(src8 + srcByteSize);
 		u8* dst8 = dst;
-		for (size i = 0; i < hashTableDWordSize; i++)
+		for (size i = 0; i < hashTableSize; i++)
 			hashTable[i] = 0;
 		u32* const controlCountPos = (u32* const)dst8;
 		dst8 += 4;
@@ -261,8 +273,8 @@ zapi::codec::Result zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 		for (;;)
 		{
 			// Check for loop exit
-			size scrBytesLeft = (size)lastSrc8 - (size)src8;
-			if (scrBytesLeft < 32)
+			size scrBytesLeft = lastSrc8 - src8;
+			if (scrBytesLeft < blockByteSize)
 			{
 				*controlLast = scrBytesLeft;
 				memcpy(dst8, src8, scrBytesLeft);
@@ -271,17 +283,18 @@ zapi::codec::Result zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 			}
 			
 			// Check for destination buffer overflow
-			size dstBytesLeft = (size)dst8 - (size)dst;
+			size dstBytesLeft = dst8 - dst;
 			if (dstBytesLeft >= dstMaxByteSize)
 				return Result::ERROR_DESTINATION_OVERFLOW;
 			
 			// Get 32-byte block
 			const dword* const block = (const dword* const)src8;
+			src8 += blockByteSize;
 			
 			// Encoding
 			size control = 0;
 			size controlBitSize = 0;
-			for (size j = 0; j < 8; j += 2)
+			for (size j = 0; j < wordCountPerBlock; j += 2)
 			{
 				// Extract two 4-byte words and hash it
 				const dword bytes1 = block[j];
@@ -318,18 +331,16 @@ zapi::codec::Result zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 			*controlPos = control;
 			controlPos = dst8++;
 			controlCount++;
-			
-			// Move to next block
-			src8 += 32;
 		}
+		
+		// Time recording
+		auto end_1 = zapi::time::Now();
 		
 		// Write control count for decoding
 		*controlCountPos = controlCount;
 		
-		auto end_1 = zapi::time::Now();
-		
 		// Output to codec state
-		state.mem->dstByteSize = (size)dst8 - (size)dst;
+		state.mem->dstByteSize = dst8 - dst;
 		
 		// Debug console output
 		if (debugOutput == TRUE)
@@ -348,7 +359,7 @@ zapi::codec::Result zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 		const u8* src8 = (const u8*)src;
 		const u8* const lastSrc8 = (const u8* const)(src8 + srcByteSize);
 		dword* dst32 = (dword*)dst;
-		for (size i = 0; i < hashTableDWordSize; i++)
+		for (size i = 0; i < hashTableSize; i++)
 			hashTable[i] = 0;
 		u32 controlCount = ((u32*)src8)[0];
 		src8 += 4;
@@ -392,6 +403,8 @@ zapi::codec::Result zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 			controlPos = src8++;
 			controlCount--;
 		}
+		
+		// Time recording
 		auto end_1 = zapi::time::Now();
 		
 		// Emit last bytes
@@ -406,6 +419,230 @@ zapi::codec::Result zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 		{
 			zapi::io::Print("Codec: " + std::to_string((dword)state.mem->codec), TRUE);
 			zapi::io::Print("Encoded " + std::to_string(state.mem->srcByteSize) + " to " + std::to_string(state.mem->dstByteSize) + " bytes", TRUE);
+			zapi::io::Print("Ratio: " + std::to_string((float)state.mem->srcByteSize / (float)state.mem->dstByteSize), TRUE);
+			zapi::io::Print("Time: " + std::to_string(zapi::time::Milliseconds(start_1, end_1)) + " ms", TRUE);
+		}
+	}
+	else if (codec & Type::XLZ && codec & Type::ENCODE)
+	{
+		/* XLZ Encoding */
+		
+		// Initialize
+		const u8* src8 = (const u8*)src;
+		const u8* const lastSrc8 = (const u8* const)(src8 + srcByteSize);
+		u8* dst8 = (u8*)dst;
+		const u8** hashTable64 = (const u8**)hashTable;
+		for (size i = 0; i < hashTableSize; i++)
+			hashTable64[i] = src8;
+		
+		// First is always literal
+		*dst8++ = *src8++;
+		
+		// Checks
+		if (srcByteSize < 5)
+			return Result::ERROR_SMALL_INPUT;
+
+		// Pointer to literals
+		const u8* literals = src8;
+
+		// Time recording
+		auto start_1 = zapi::time::Now();
+	
+		// Loop
+		for (;;)
+		{
+			// Hashing
+			qword hash = (((qword)(*(dword*)src8) * 0x9e3779b9ull) >> 32ull) & hashTableMask;
+			while ((size)(src8 - hashTable64[hash]) > 1048575 || *(dword*)src8 != *(dword*)hashTable64[hash])
+			{
+				hashTable64[hash] = src8++;
+				hash = (((qword)(*(dword*)src8) * 0x9e3779b9ull) >> 32ull) & hashTableMask;
+				if (src8 >= lastSrc8)
+					break;
+			}
+			
+			// Prevent overflow
+			if (src8 >= lastSrc8)
+				break;
+			
+			// Match found
+			const u8* match = (const u8*)hashTable64[hash];
+			hashTable64[hash] = src8;
+
+			// Output literals
+			size literalCount = src8 - literals;
+			if (literalCount) 
+			{
+				while (literalCount > 30)
+				{
+					*dst8++ = 255;
+					memcpy(dst8, literals, 31);
+					dst8 += 31;
+					literals += 31;
+					literalCount -= 31;
+				}
+				if (literalCount)
+				{
+					*dst8++ = literalCount | 0xe0;
+					memcpy(dst8, literals, literalCount);
+					dst8 += literalCount;
+					literals += literalCount;
+				}
+			}
+
+			// Hashing
+			qword hash1 = (((qword)(*(dword*)(src8 + 1)) * 0x9e3779b9ull) >> 32ull) & hashTableMask;
+			qword hash2 = (((qword)(*(dword*)(src8 + 2)) * 0x9e3779b9ull) >> 32ull) & hashTableMask;
+			qword hash3 = (((qword)(*(dword*)(src8 + 3)) * 0x9e3779b9ull) >> 32ull) & hashTableMask;
+			hashTable64[hash1] = src8 + 1;
+			hashTable64[hash2] = src8 + 2;
+			hashTable64[hash3] = src8 + 3;
+
+			// Search for longer match
+			size dist = src8 - match;
+			size matchByteSize = 4;
+			while (src8[matchByteSize] == match[matchByteSize] && src8 + matchByteSize < lastSrc8 && ++matchByteSize < 265);
+			src8 += matchByteSize;
+			literals = src8;
+			
+			// Output
+			qword x = dist > 4095;
+			if (matchByteSize > 9)
+			{
+				*dst8++ = 0xc0 | (x << 4) | (dist & 0xf);
+				*dst8++ = matchByteSize - 10;
+				*dst8++ = dist >> 4;
+				*dst8 = dist >> 12;
+				dst8 += x;
+			}
+			else
+			{
+				*dst8++ = ((matchByteSize - 4) << 5) | (x << 4) | (dist & 0xf);
+				*dst8++ = dist >> 4;
+				*dst8 = dist >> 12;
+				dst8 += x;
+			}
+		}
+		
+		// Time recording
+		auto end_1 = zapi::time::Now();
+
+		// Output pending literals
+		size literalCount = lastSrc8 - literals;
+		if (literalCount)
+		{
+			while (literalCount > 30)
+			{
+				*dst8++ = 0xff;
+				memcpy(dst8, literals, 31);
+				dst8 += 31;
+				literals += 31;
+				literalCount -= 31;
+			}
+			if (literalCount)
+			{
+				*dst8++ = literalCount | 0xe0;
+				memcpy(dst8, literals, literalCount);
+				dst8 += literalCount;
+				literals += literalCount;
+			}
+		}
+
+		// Output to codec state
+		state.mem->dstByteSize = dst8 - dst;
+		
+		// Debug console output
+		if (debugOutput == TRUE)
+		{
+			zapi::io::Print("Codec: " + std::to_string((dword)state.mem->codec), TRUE);
+			zapi::io::Print("Encoded " + std::to_string(state.mem->srcByteSize) + " to " + std::to_string(state.mem->dstByteSize) + " bytes", TRUE);
+			zapi::io::Print("Ratio: " + std::to_string((float)state.mem->srcByteSize / (float)state.mem->dstByteSize), TRUE);
+			zapi::io::Print("Time: " + std::to_string(zapi::time::Milliseconds(start_1, end_1)) + " ms", TRUE);
+		}
+	}
+	else if (codec & Type::XLZ && codec & Type::DECODE)
+	{
+		/* XLZ Decoding */
+		
+		// Initialize
+		const u8* src8 = (const u8*)src;
+		const u8* const lastSrc8 = (const u8* const)(src8 + srcByteSize);
+		u8* dst8 = (u8*)dst;
+		
+		// First is always literal
+		*dst8++ = *src8++;
+
+		// Get token
+		qword token = *src8++;
+
+		// Time recording
+		auto start_1 = zapi::time::Now();
+
+		// Loop
+		while (src8 < lastSrc8)
+		{
+			// Literals
+			while (token == 255)
+			{
+				memcpy(dst8, src8, 31);
+				dst8 += 31;
+				src8 += 31;
+				token = *src8++;
+			}
+			
+			// Match or literals
+			if ((token >> 5) == 0x7)
+			{
+				// Literals
+				size pending = token & 0x1f;
+				memcpy(dst8, src8, pending);
+				dst8 += pending;
+				src8 += pending;
+				token = *src8++;
+			}
+			else
+			{
+				// Match
+				qword x = (token >> 4) & 1;
+				size offset = token & 0xf;
+				size matchByteSize = token >> 5;
+				
+				if (matchByteSize == 6)
+					matchByteSize += *src8++;
+				
+				matchByteSize += 4;
+				
+				if (x)
+				{
+					qword hi, lo;
+					hi = *src8++;
+					lo = *src8++;
+					offset |= (hi << 4) | (lo << 12);
+				}
+				else
+				{
+					offset |= (*src8++ << 4);
+				}
+				
+				const u8* ptr = dst8 - offset;
+				while (matchByteSize--)
+					*dst8++ = *ptr++;
+				
+				token = *src8++;
+			}
+		}
+		
+		// Time recording
+		auto end_1 = zapi::time::Now();
+		
+		// Output to codec state
+		state.mem->dstByteSize = dst8 - dst;
+		
+		// Debug console output
+		if (debugOutput == TRUE)
+		{
+			zapi::io::Print("Codec: " + std::to_string((dword)state.mem->codec), TRUE);
+			zapi::io::Print("Decoded " + std::to_string(state.mem->srcByteSize) + " to " + std::to_string(state.mem->dstByteSize) + " bytes", TRUE);
 			zapi::io::Print("Ratio: " + std::to_string((float)state.mem->srcByteSize / (float)state.mem->dstByteSize), TRUE);
 			zapi::io::Print("Time: " + std::to_string(zapi::time::Milliseconds(start_1, end_1)) + " ms", TRUE);
 		}

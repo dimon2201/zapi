@@ -30,7 +30,7 @@ int main()
 {
     zapi::io::File inFile("C:/DDD/zapi/data/enwik8");
 	auto encState = zapi::codec::CreateState(
-		zapi::codec::Type::ZAP_FAST | zapi::codec::Type::ENCODE,
+		zapi::codec::Type::XLZ | zapi::codec::Type::ENCODE,
 		(zapi::u8*)inFile.Data().mem,
 		inFile.Data().byteSize,
 		inFile.Data().byteSize,
@@ -41,7 +41,7 @@ int main()
     zapi::io::File outFile("C:/DDD/zapi/data/enwik8_out", encState.mem->dstData.mem, encState.mem->dstByteSize);
 	
 	auto decState = zapi::codec::CreateState(
-		zapi::codec::Type::ZAP_FAST | zapi::codec::Type::DECODE,
+		zapi::codec::Type::XLZ | zapi::codec::Type::DECODE,
 		(zapi::u8*)encState.mem->dstData.mem,
 		encState.mem->dstByteSize,
 		encState.mem->srcByteSize,
