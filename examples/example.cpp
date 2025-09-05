@@ -30,7 +30,7 @@ int main()
 {
     zapi::io::File inFile("C:/DDD/zapi/data/enwik8");
 	auto encState = zapi::codec::CreateState(
-		zapi::codec::Type::EXPERIMENT | zapi::codec::Type::ENCODE,
+		zapi::codec::Type::XLZ | zapi::codec::Type::ENCODE,
 		(zapi::u8*)inFile.Data().mem,
 		inFile.Data().byteSize,
 		inFile.Data().byteSize,

@@ -10,9 +10,11 @@ typedef struct Args
 	qword srcData;
 	qword dstData;
 	qword srcDataByteSize;
+	qword dstDataByteSize;
 	qword dstDataMaxByteSize;
 	qword workMemory;
 	qword codecInfo;
+	qword _reserved;
 } Args;
 
 u64 SomeFunction(
@@ -24,5 +26,9 @@ u64 CompressorEncode(
 );
 
 u64 LZCompress(
+	const Args* args
+);
+
+u64 LZCompressBranchless(
 	const Args* args
 );
