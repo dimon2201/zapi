@@ -648,6 +648,44 @@ zapi::codec::Result zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 			zapi::io::Print("Time: " + std::to_string(zapi::time::Milliseconds(start_1, end_1)) + " ms", TRUE);
 		}
 	}
+	else if (codec & Type::RC && codec & Type::ENCODE)
+	{
+		// Time recording
+		auto start_1 = zapi::time::Now();
+		
+		rc::RangeCodec rc(&state);
+		
+		// Time recording
+		auto end_1 = zapi::time::Now();
+		
+		// Debug console output
+		if (debugOutput == TRUE)
+		{
+			zapi::io::Print("Codec: " + std::to_string((dword)state.mem->codec), TRUE);
+			zapi::io::Print("Encoded " + std::to_string(state.mem->srcByteSize) + " to " + std::to_string(state.mem->dstByteSize) + " bytes", TRUE);
+			zapi::io::Print("Ratio: " + std::to_string((float)state.mem->srcByteSize / (float)state.mem->dstByteSize), TRUE);
+			zapi::io::Print("Time: " + std::to_string(zapi::time::Milliseconds(start_1, end_1)) + " ms", TRUE);
+		}
+	}
+	else if (codec & Type::RC && codec & Type::DECODE)
+	{
+		// Time recording
+		auto start_1 = zapi::time::Now();
+		
+		rc::RangeCodec rc(&state);
+		
+		// Time recording
+		auto end_1 = zapi::time::Now();
+		
+		// Debug console output
+		if (debugOutput == TRUE)
+		{
+			zapi::io::Print("Codec: " + std::to_string((dword)state.mem->codec), TRUE);
+			zapi::io::Print("Decoded " + std::to_string(state.mem->srcByteSize) + " to " + std::to_string(state.mem->dstByteSize) + " bytes", TRUE);
+			zapi::io::Print("Ratio: " + std::to_string((float)state.mem->srcByteSize / (float)state.mem->dstByteSize), TRUE);
+			zapi::io::Print("Time: " + std::to_string(zapi::time::Milliseconds(start_1, end_1)) + " ms", TRUE);
+		}
+	}
 	else if (codec & Type::EXPERIMENT && codec & Type::ENCODE)
 	{
 		// EXPERIMENT
@@ -656,40 +694,56 @@ zapi::codec::Result zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 		const u8* src8 = (const u8*)src;
 		const u8* const lastSrc8 = (const u8* const)(src8 + srcByteSize);
 		u8* dst8 = (u8*)dst;
+		dst8++[0] = src8++[0];
 		
-		qword ht[65536] = {};
+		dword ht[65536] = {};
 		
 		// Time recording
 		auto start_1 = zapi::time::Now();
 		
 		// Loop
-		qword bitBuffer = 0;
-		size bitBufferBitSize = 0;
-		u8* control = dst8++;
-		size controlBitSize = 0;
+		size literalCounter = 0;
+		const u8* literalPtr = src8;
 		for (; src8 < lastSrc8;)
 		{
-			const qword word = *(qword*)src8;
-			const u16 hash = hash16(word);
-			const qword hashWord = ht[hash];
-			ht[hash] = word;
+			const dword word = *(dword*)src8;
+			const u16 hash = ((qword)(((dword*)src8)[0]) * 0x9e3779b9ull) >> 32ull;
+			const size offset = ht[hash];
+			ht[hash] = src8 - src;
+			const u8* htPtr = src + offset;
+			const size distance = src8 - htPtr;
 			
-			if (word == hashWord)
+			if (distance < 65536 && word == ((dword*)htPtr)[0])
 			{
-				controlBitSize++;
-				dst8 += 8;
-				src8 += 8;
+				if (literalCounter != 0)
+				{
+					if (literalCounter < 14)
+					{
+						dst8++[0] = 0;
+					}
+					else
+					{
+						((dword*)dst8)[0] = 0;
+						dst8 += 4;
+					}
+					memcpy(dst8, literalPtr, literalCounter);
+					dst8 += literalCounter;
+					literalCounter = 0;
+				}
+				
+				src8 += 4;
+				htPtr += 4;
+				size matchByteSize = 4;
+				while (*src8++ == *htPtr++ && matchByteSize++ < 15);
+				
+				*dst8++ = hash;
+				dst8 += 2;
+				literalPtr = src8;
 			}
 			else
 			{
-				controlBitSize++;
-				dst8++;
+				literalCounter++;
 				src8++;
-			}
-			if (controlBitSize == 8)
-			{
-				controlBitSize = 0;
-				control = dst8++;
 			}
 		}
 		
@@ -703,13 +757,402 @@ zapi::codec::Result zapi::codec::Codec(zapi::storage::MemAlloc<State>& state)
 		if (debugOutput == TRUE)
 		{
 			zapi::io::Print("Codec: " + std::to_string((dword)state.mem->codec), TRUE);
-			zapi::io::Print("Decoded " + std::to_string(state.mem->srcByteSize) + " to " + std::to_string(state.mem->dstByteSize) + " bytes", TRUE);
+			zapi::io::Print("Encoded " + std::to_string(state.mem->srcByteSize) + " to " + std::to_string(state.mem->dstByteSize) + " bytes", TRUE);
 			zapi::io::Print("Ratio: " + std::to_string((float)state.mem->srcByteSize / (float)state.mem->dstByteSize), TRUE);
 			zapi::io::Print("Time: " + std::to_string(zapi::time::Milliseconds(start_1, end_1)) + " ms", TRUE);
 		}
 	}
 	
 	return Result::SUCCESS;
+}
+
+zapi::codec::rc::RangeCodec::RangeCodec(storage::MemAlloc<State>* const state)
+{
+	_pState = state->mem;
+	
+	// Checks
+	if (_pState->srcByteSize >= 1ull << 32ull)
+	{
+		if (_pState->debugOutput == TRUE)
+			io::Print("Range codec input size must not exceed 32 bits!", TRUE);
+		
+		return;
+	}
+	
+	// Initialize
+	const u8* src = (const u8*)_pState->srcData;
+	const size srcByteSize = _pState->srcByteSize;
+	const u8* const lastSrc = (const u8* const)(src + srcByteSize);
+	const u8* const dst = (const u8* const)_pState->dstData.mem;
+	const u8* src8 = src;
+	u8* dst8 = (u8*)dst;
+	
+	constexpr size TOP = 1 << 24;
+	constexpr size BOT = 1 << 16;
+	constexpr size MASK32 = 0xFFFFFFFF;
+	constexpr size K_BLOCK_SIZE = (1 << 16) - 1;
+	const size symbolsByteSize = sizeof(Symbol) * 257;
+	
+	if ((_pState->codec & Type::ENCODE) != Type::NONE)
+	{
+		const size blockCount = srcByteSize / K_BLOCK_SIZE;
+		const size bytesLeft = srcByteSize - (blockCount * K_BLOCK_SIZE);
+		const size extraBlock = bytesLeft > 0 ? 1 : 0;
+		
+		((size*)dst8)[0] = blockCount;
+		dst8 += 8;
+		((size*)dst8)[0] = extraBlock;
+		dst8 += 8;
+		
+		for (size b = 0; b < blockCount + extraBlock; b++)
+		{
+			const size bps = b == blockCount ? blockCount * K_BLOCK_SIZE : b * K_BLOCK_SIZE;
+			const size bpe = b == blockCount ? srcByteSize : bps + K_BLOCK_SIZE;
+			
+			ClearBitBuffer();
+			
+			// Zero table
+			_totalFrequency = 0;
+			memset(&_symbols[0], 0, symbolsByteSize);
+			_symbols[256].frequency = 1; // EOF
+			_totalFrequency++;
+			
+			// Collect frequencies
+			for (size i = bps; i < bpe; i++)
+			{
+				u8 symbol = src[i];
+				_symbols[symbol].code = symbol;
+				_symbols[symbol].frequency++;
+				_totalFrequency++;
+			}
+			
+			// Make ranges
+			size cumFrequency = 0;
+			for (size i = 0; i < 257; i++)
+			{
+				_symbols[i].cumFrequency = cumFrequency;
+				cumFrequency += _symbols[i].frequency;
+			}
+			
+			// Write metadata
+			((size*)dst8)[0] = _totalFrequency;
+			dst8 += 8;
+			size* const compressedByteSize = (size* const)&dst8[0];
+			dst8 += 8;
+			memcpy(&dst8[0], &_symbols[0], symbolsByteSize);
+			dst8 += symbolsByteSize;
+			
+			// Encoding
+			size low = 0;
+			size high = MASK32 + 1;
+			size range = MASK32 + 1;
+			size underflowBitCount = 0;
+			u8 buffer = 0;
+			size carry = 0;
+			boolean start = TRUE;
+			
+			//std::cout << "src count " << (bpe + 1) - bps << std::endl;
+			
+			u8* const dstBeforeEncoding = dst8;
+			
+			for (size i = bps; i < bpe + 1; i++)
+			{
+				const u16 symbol = i == bpe ? 256 : src[i];
+				
+				const size step = range / _totalFrequency;
+				
+				low += step * _symbols[symbol].cumFrequency;
+				range = step * (size)_symbols[symbol].frequency;
+				//high = low + step * (_symbols[symbol].cumFrequency + (size)_symbols[symbol].frequency);
+				//const size lowbefore = low;
+				//const size rangebefore = range;
+				//low   = low + ((range * _symbols[symbol].cumFrequency) / _totalFrequency);
+				//range = (range * (size)_symbols[symbol].frequency) / _totalFrequency;
+				//if (low > MASK32 || range > MASK32)
+				//	std::cout << "overflow " << "lowbefore: " << lowbefore << " low: " << low << " rangebefore: " << rangebefore << " cumfreq: " << _symbols[symbol].cumFrequency << " freq: " << _symbols[symbol].frequency << " totfreq: " << _totalFrequency  << std::endl;
+				//std::cout << "sym: " << (char)symbol << " low: " << low << " range: " << range << " cumfreq: " << _symbols[symbol].cumFrequency << std::endl;
+				//std::cout << (char)symbol << " " << (size)symbol << std::endl;
+				
+				// Renormalize
+				while ((low ^ low+range)<TOP || range<BOT && ((range= -low & BOT-1),1))
+				{
+					if (dst8 - dst < _pState->dstMaxByteSize)
+						*dst8++ = low >> 24;
+					low = (low << 8) & MASK32;
+					range = (range << 8) & MASK32;
+				}
+				/*while (range < BOT)
+				{
+					if (dst8 - dst < _pState->dstMaxByteSize)
+						*dst8++ = low >> 24;
+					range = (((~low) & (BOT - 1)) << 8) & MASK32;
+					//range = (range << 8) & MASK32;
+					low = (low << 8) & MASK32;
+				}*/
+				
+				/*const size range2 = high - low + 1;
+				low  = low + ((range2 * _symbols[symbol].cumFrequency) / _totalFrequency);
+				high = low + ((range2 * (size)_symbols[symbol].frequency) / _totalFrequency) - 1;
+				
+				std::cout << low << " " << high << " " << high - low << std::endl;
+				
+				for (;;)
+				{
+					if (((high ^ low) >> 31) == 0) // Same MSB
+					{
+						PutBits(&dst8, low >> 31, underflowBitCount);
+						//low -= 1 << 31;
+						//high -= 1 << 31;
+						low = (low << 1) & MASK32;
+						high = (high << 1) & MASK32;
+						high |= 1;
+					}
+					else if ((high >> 30) == 2 && (low >> 30) == 1) // Underflow
+					{
+						std::cout << "underflow" << std::endl;
+						underflowBitCount++;
+						//low -= 1 << 30;
+						//high -= 1 << 30;
+						low = (low << 1) & MASK32;
+						high = (high << 1) & MASK32;
+					}
+					else break;
+				}*/
+			}
+			
+			*dst8++ = low >> 24;
+			*dst8++ = low >> 16;
+			*dst8++ = low >> 8;
+			*dst8++ = low;
+			
+			*compressedByteSize = dst8 - dstBeforeEncoding;
+			//std::cout << "compressed byte size " << *compressedByteSize << std::endl;
+			
+			//FlushBits(&dst8, low, underflowBitCount);
+		}
+		
+		_pState->dstByteSize = dst8 - dst;
+	}
+	else if ((_pState->codec & Type::DECODE) != Type::NONE)
+	{
+		size blockCount = ((size*)src8)[0];
+		src8 += 8;
+		size extraBlock = ((size*)src8)[0];
+		src8 += 8;
+		
+		for (size b = 0; b < blockCount + extraBlock; b++)
+		{
+			ClearBitBuffer();
+			
+			// Read table
+			_totalFrequency = ((size*)src8)[0];
+			src8 += 8;
+			const size compressedByteSize = ((size*)src8)[0];
+			src8 += 8;
+			memcpy(&_symbols[0], &src8[0], symbolsByteSize);
+			src8 += symbolsByteSize;
+			
+			//std::cout << "block id " << b << std::endl;
+			//std::cout << "tot " << _totalFrequency << std::endl;
+			//std::cout << "compressed byte size " << compressedByteSize << std::endl;
+			
+			const u8* srcBeforeDecoding = src8;
+			
+			// Read first 4 bytes
+			size code = 0;
+			code = (code << 8) | *src8++;
+			code = (code << 8) | *src8++;
+			code = (code << 8) | *src8++;
+			code = (code << 8) | *src8++;
+			/*int bit = 0;
+			for (size i = 0; i < 32; i++)
+			{
+				bit = GetBit(&src8, lastSrc);
+				code |= bit << i;
+			}*/
+			//std::cout << "code " << code << std::endl;
+			
+			// Decoding
+			size low = 0;
+			size high = MASK32 + 1;
+			size range = MASK32 + 1;
+			size underflowBitCount = 0;
+			u8* p = dst8;
+			for (;;)
+			{
+				const size step = range / _totalFrequency;
+				//std::cout << "low range " << low << " " << range << std::endl;
+				//if (step == 0)
+				//	std::cout << "zero " << range << " " << _totalFrequency << std::endl;
+				
+				//const size count = (code - low) / step;
+				//const size range2 = high - low + 1;
+				
+				//std::cout << " low: " << low << " range: " << range << " code: " << code << " count: " << (code - low) / (range / _totalFrequency) << std::endl;
+				
+				//const size count = ((code - low) * _totalFrequency) / range;
+				const size count = (code - low) / (range / _totalFrequency);
+				
+				// Find symbol
+				u16 symbol = 0;
+				for (size j = 0; j < 257; j++)
+				{
+					if (count >= _symbols[j].cumFrequency && count < _symbols[j].cumFrequency + _symbols[j].frequency)
+					{
+						symbol = j;
+						break;
+					}
+				}
+				if (symbol == 256) // EOF
+					break;
+				
+				//freq = 0 count: 29562089861707749 code: 3170973349 low: 3174889472 range: 40928512
+				
+				if (_symbols[symbol].frequency == 0)
+					std::cout << "freq = 0 count: " << count << " code: " << code << " low: " << low << " range: " << range << std::endl;
+				
+				low += step * _symbols[symbol].cumFrequency;
+				range = step * (size)_symbols[symbol].frequency;
+				//low   = low + (range * _symbols[symbol].cumFrequency) / _totalFrequency;
+				//range = (range * (size)_symbols[symbol].frequency) / _totalFrequency;
+				
+				// Renormalize
+				while ((low ^ low+range)<TOP || range<BOT && ((range= -low & BOT-1),1))
+				{
+					code = ((code << 8) & MASK32) | *src8++;
+					low = (low << 8) & MASK32;
+					range = (range << 8) & MASK32;
+				}
+				/*while (range < BOT)
+				{
+					code = ((code << 8) & MASK32) | *src8++;
+					range = (((~low) & (BOT - 1)) << 8) & MASK32;
+					//range = (range << 8) & MASK32;
+					low = (low << 8) & MASK32;
+				}*/
+				
+				/*low  = low + ((range2 * _symbols[symbol].cumFrequency) / _totalFrequency);
+				high = low + ((range2 * (size)_symbols[symbol].frequency) / _totalFrequency) - 1;
+				
+				std::cout << (char)symbol << " " << code << " " << low << " " << high << " " << high - low << std::endl;
+				
+				for (;;)
+				{
+					if (((high ^ low) >> 31) == 0) // Same MSB
+					{
+						auto bit = GetBit(&src8, lastSrc);
+						if (bit != -1)
+						{
+							underflowBitCount++;
+							while (underflowBitCount--)
+								code = ((code << 1) | GetBit(&src8, lastSrc)) & MASK32;
+						}
+						else
+						{
+							code = (code << 1) & MASK32;
+						}
+						low = (low << 1) & MASK32;
+						high = (high << 1) & MASK32;
+						high |= 1;
+					}
+					else if ((high >> 30) == 2 && (low >> 30) == 1) // Underflow
+					{
+						underflowBitCount++;
+						low = (low << 1) & MASK32;
+						high = (high << 1) & MASK32;
+					}
+					else break;
+				}*/
+				
+				*dst8++ = symbol;
+			}
+			//std::cout << "dest count " << dst8 - p + 1 << std::endl;
+			
+			if (compressedByteSize > 4)
+				src8 += 4;
+			
+			src8 = srcBeforeDecoding + compressedByteSize;
+		}
+		
+		_pState->dstByteSize = dst8 - dst;
+	}
+}
+
+zapi::codec::rc::RangeCodec::~RangeCodec()
+{
+}
+
+void zapi::codec::rc::RangeCodec::ClearBitBuffer()
+{
+	_bitBuffer = 0;
+	_bitBufferBitSize = 0;
+}
+
+void zapi::codec::rc::RangeCodec::PutBits(u8** const buffer, boolean bit, size& underflowBitCount)
+{
+	WriteBit(buffer, bit);
+	
+	boolean invBit = bit ^ 1;
+	while (underflowBitCount > 0)
+	{
+		WriteBit(buffer, bit);
+		underflowBitCount--;
+	}
+}
+
+int zapi::codec::rc::RangeCodec::GetBit(const u8** const buffer, const u8* bufferLast)
+{
+	if (buffer[0] >= bufferLast)
+	{
+		if (_bitBufferBitSize == 0)
+			return -1;
+		
+		boolean bit = (_bitBuffer >> (_bitBufferBitSize - 1)) & 1;
+		_bitBufferBitSize--;
+		
+		return bit;
+	}
+	else
+	{
+		if (_bitBufferBitSize == 0)
+		{
+			_bitBuffer = ((dword*)buffer[0])[0];
+			buffer[0] += 4;
+			_bitBufferBitSize = 32;
+		}
+		
+		boolean bit = (_bitBuffer >> (_bitBufferBitSize - 1)) & 1;
+		_bitBufferBitSize--;
+		
+		return bit;
+	}
+	
+	return -1;
+}
+
+void zapi::codec::rc::RangeCodec::FlushBits(u8** const buffer, size state, size& underflowBitCount)
+{
+	PutBits(buffer, 0, underflowBitCount);
+	
+	for (size i = 0; i < 32; i++)
+	{
+		WriteBit(buffer, (state >> (31 - i)) & 1);
+	}
+}
+	
+
+void zapi::codec::rc::RangeCodec::WriteBit(u8** const buffer, boolean bit)
+{
+	_bitBuffer |= bit << _bitBufferBitSize++;
+	std::cout << "bit " << bit << std::endl;
+	
+	if (_bitBufferBitSize == 32)
+	{
+		((dword*)buffer[0])[0] = _bitBuffer & 0xFFFFFFFF;
+		buffer[0] += 4;
+		_bitBuffer >>= 32ull;
+		_bitBufferBitSize -= 32;
+	}
 }
 
 zapi::size zapi::utils::GetCacheLineSize()

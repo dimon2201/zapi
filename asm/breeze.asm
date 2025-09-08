@@ -44,15 +44,15 @@ LZCompressBranchless:
 		add 					r8, rsi										; R8 = srcData fixed pointer
 		add 					r9, rdi										; R9 = dstData fixed pointer
 		mov 					r10, qword[rcx + 40]						; R10 = workMemory pointer
-		mov						rax, 0										; RAX = literal counter
-		mov						rbx, rsi									; RBX = sliding window start
+		mov						rax, rsi									; RAX = literal pointer
+		mov						rbx, 0										; RBX = literal counter
 
 	LZCompressBranchless_InitializeHashTable:
 		mov 					r11, r10									; R11 = workMemory pointer
 		mov 					r12, 65536									; R12 = counter
 		
 		LZCompressBranchless_InitializeHashTable_Loop:						; Filling srcData pointer in each cell
-			mov 				qword[r11], rsi
+			mov 				qword[r11], 0
 			add 				r11, 8
 			dec 				r12
 			jnz 				LZCompressBranchless_InitializeHashTable_Loop
@@ -63,6 +63,7 @@ LZCompressBranchless:
 		mov						dword[rdi], r11d
 		add						rsi, 4
 		add						rdi, 4
+		add						rax, 4
 	
 	LZCompressBranchless_MainLoop:
 		; Overflow check
@@ -80,24 +81,95 @@ LZCompressBranchless:
 		imul    				r12d, r13d
 		shr     				r12d, 16									; R12 = hash
 		
-		; Sliding window start
-		mov						r13, rsi
-		mov						r14, rsi
-		sub						r13, r8
-		sub						r14, 65535
-		cmp						r13, 65535
-		cmovg					rbx, r14									; RBX = sliding window start
-		
 		; Read hash table offset pointer
-		lea 					r13, [r10 + r12 * 2]						; R13 = hash table index
-		mov 					r14w, word [r13]							; R14 = hash table offset
+		lea 					r13, [r10 + r12 * 4]						; R13 = hash table index
+		mov 					r14d, dword[r13]							; R14 = hash table offset
 		mov						r15, rsi									; R15 = current offset
-		sub						r15, rbx
-		mov 					word[r13], r15w								; Write current offset to hash table
+		sub						r15, r8
+		mov 					dword[r13], r15d							; Write current offset to hash table
+		mov						r15, r14									; R15 = hash table pointer
+		add						r15, r8
+		mov						r12, rsi
+		sub						r12, r15									; R12 = distance
 		
-		add						rsi, 1
+		; Get hash table bytes
+		mov						r13d, dword[r15]
 		
-		jmp LZCompressBranchless_MainLoop
+		; Branching
+		cmp						r12, 65536
+		jg						LZCompressBranchless_Literal
+		cmp						r11d, r13d
+		jne						LZCompressBranchless_Literal
+		
+		; Match
+		LZCompressBranchless_Match:
+		
+			; Literals loop check
+			LZCompressBranchless_Match_OutputLiterals_Check:
+				
+				; Check if literal counter == 0
+				cmp				rbx, 0
+				je				LZCompressBranchless_Match_FindLongerMatch
+				
+				; Check if literal counter > 14
+				cmp				rbx, 14										; If literal counter > 14
+				jg				LZCompressBranchless_Match_OutputLiterals_Emit14
+			
+			; Emit left literal bytes
+			LZCompressBranchless_Match_OutputLiterals_EmitLeft:
+				
+				; Output token
+				mov				byte[rdi], bl
+				inc				rdi
+				
+				; Copy left literals
+				movdqu			xmm0, [rax]
+				movdqu			[rdi], xmm0
+				add				rdi, rbx
+				add				rax, rbx
+				mov				rbx, 0
+				jmp				LZCompressBranchless_Match_FindLongerMatch
+			
+			; Emit exactly 14 literal bytes
+			LZCompressBranchless_Match_OutputLiterals_Emit14:
+				
+				; Output token
+				mov				byte[rdi], 14
+				inc 			rdi
+				
+				; Copy 14 literals
+				movdqu			xmm0, [rax]
+				movdqu			[rdi], xmm0
+				add				rdi, 14
+				add				rax, 14
+				sub				rbx, 14
+				jmp				LZCompressBranchless_Match_OutputLiterals_Check
+			
+			; Find longer match
+			LZCompressBranchless_Match_FindLongerMatch:
+			
+				; Loop through srcData pointer and hash table pointer and compare bytes
+				add				rsi, 4
+				add				r15, 4
+				mov				r11d, dword[rsi]
+				mov				r12d, dword[r15]
+				xor				r11d, r12d
+				lzcnt			r12d, r11d
+				shr				r12d, 3
+				add				rsi, r12
+				mov				rax, rsi
+			
+			; Encode token
+			LZCompressBranchless_Match_EncodeToken:
+			
+				; Output token
+				jmp 			LZCompressBranchless_MainLoop
+		
+		; Literal
+		LZCompressBranchless_Literal:
+			add					rsi, 1
+			add					rbx, 1
+			jmp 				LZCompressBranchless_MainLoop
 	
 	LZCompressBranchless_OutputLastLiterals:
 	

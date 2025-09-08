@@ -27,6 +27,7 @@ namespace zapi
     using boolean = uint32_t;
     using f64 = double;
     using timepoint = std::chrono::high_resolution_clock::time_point;
+	
     constexpr boolean TRUE = 0;
     constexpr boolean FALSE = 0;
 
@@ -122,7 +123,8 @@ namespace zapi
 			DECODE = 2,
 			ZAP_FAST = 4,
 			XLZ = 8,
-			EXPERIMENT = 16
+			EXPERIMENT = 16,
+			RC = 32
 		};
 		inline Type operator|(Type lhs, Type rhs) { return (Type)((dword)lhs | (dword)rhs); }
 		inline Type operator&(Type lhs, Type rhs) { return (Type)((dword)lhs & (dword)rhs); }
@@ -160,19 +162,44 @@ namespace zapi
 		);
 		void DestroyState(zapi::storage::MemAlloc<State>& state);
 		Result Codec(zapi::storage::MemAlloc<State>& state);
+		
+		namespace rc
+		{
+			typedef struct Symbol
+			{
+				u32 code;
+				u32 frequency;
+				size cumFrequency;
+			} Symbol;
+			
+			class RangeCodec
+			{
+
+			public:
+				explicit RangeCodec(storage::MemAlloc<State>* const state);
+				~RangeCodec();
+				
+				void ClearBitBuffer();
+				void PutBits(u8** const buffer, boolean bit, size& underflowBitCount);
+				int GetBit(const u8** const buffer, const u8* bufferLast);
+				void FlushBits(u8** const buffer, size state, size& underflowBitCount);
+				
+			private:
+				void WriteBit(u8** const buffer, boolean bit);
+
+			private:
+				State* _pState = nullptr;
+				size _totalFrequency = 0;
+				Symbol _symbols[257] = {};
+				qword _bitBuffer = 0;
+				size _bitBufferBitSize = 0;
+
+			};
+		}
     }
 	
 	namespace utils
 	{
 		size GetCacheLineSize();
-	}
-	
-	inline uint16_t hash16(uint64_t x) {
-		x ^= x >> 33;
-		x *= 0xff51afd7ed558ccdULL;
-		x ^= x >> 33;
-		x *= 0xc4ceb9fe1a85ec53ULL;
-		x ^= x >> 33;
-		return (uint16_t)(x >> 48);
 	}
 }
