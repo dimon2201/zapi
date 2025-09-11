@@ -1,8 +1,6 @@
 # ZAPI
-Extremely fast LZ77 compression
-
-Extremely fast data compression algorithm which
-also achieves rather good compression ratio.
+Fast data compression algorithms (LZ77, dictionary, entropy) which
+also achieve rather good compression ratio.
 
 # Benchmark
 enwik8 compression benchmark
