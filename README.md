@@ -1,5 +1,5 @@
 # ZAPI
-Fast data compression algorithms (LZ77, dictionary, entropy) which
+Fast data compression algorithms (LZ77, dictionary, entropy) that
 also achieve rather good compression ratio.
 
 # Benchmark
