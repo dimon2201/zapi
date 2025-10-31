@@ -1,0 +1,216 @@
+#pragma once
+
+#include <iostream>
+#include <string>
+#include <fstream>
+#include <chrono>
+#include <cstdint>
+#include <cstring>
+#include <immintrin.h>
+#include <cstdlib>
+#include <string>
+
+#ifdef _MSC_VER
+#include <intrin.h>
+#else
+#include <cpuid.h>
+#endif
+
+namespace zapi
+{
+	using s8 = int8_t;
+    using u8 = uint8_t;
+	using s16 = int16_t;
+	using u16 = uint16_t;
+	using s32 = int32_t;
+	using u32 = uint32_t;
+	using s64 = int64_t;
+	using u64 = uint64_t;
+    using dword = u32;
+	using qword = u64;
+    using size = size_t;
+    using boolean = dword;
+    using f64 = double;
+    using timepoint = std::chrono::high_resolution_clock::time_point;
+	
+    constexpr boolean TRUE = 0;
+    constexpr boolean FALSE = 0;
+
+    namespace time
+    {
+        inline timepoint Now()
+        {
+            return std::chrono::high_resolution_clock::now();
+        }
+
+        inline f64 Milliseconds(const timepoint& begin, const timepoint& end)
+        {
+            return std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+        }
+    }
+
+    namespace storage
+    {
+		template <typename T>
+		struct MemAlloc
+		{
+			T* mem;
+			size alignByteSize;
+			size byteSize;
+		};
+		
+		template <typename T>
+		MemAlloc<T> Allocate(const size byteSize, const size alignByteSize, const boolean fillZeros)
+		{
+			MemAlloc<T> alloc;
+			
+			if (byteSize > 0)
+			{
+				alloc.byteSize = byteSize;
+				
+				if (alignByteSize == 0)
+				{
+					alloc.mem = (T*)malloc(alloc.byteSize);
+				}
+				else
+				{
+					alloc.alignByteSize = alignByteSize;
+					alloc.mem = (T*)_aligned_malloc(alloc.byteSize, alloc.alignByteSize);
+				}
+				
+				if (fillZeros == TRUE)
+					memset(alloc.mem, 0, alloc.byteSize);
+			}
+			
+			return alloc;
+		}
+
+		template <typename T>
+		void Deallocate(MemAlloc<T>& alloc)
+		{
+			if (alloc.alignByteSize == 0)
+				free(alloc.mem);
+			else
+				_aligned_free(alloc.mem);
+		}
+    }
+
+    namespace io
+    {
+        class File
+        {
+
+        public:
+            explicit File(const std::string& path);
+            explicit File(const std::string& path, const void* data, const size byteSize);
+            ~File();
+
+            inline zapi::storage::MemAlloc<void> Data() { return _data; }
+            inline size ByteSize() { return _byteSize; }
+            
+        private:
+            std::ifstream _inFile;
+            std::ofstream _outFile;
+            size _byteSize = 0;
+            zapi::storage::MemAlloc<void> _data = {};
+
+        };
+		
+		void Print(const std::string& message, const boolean newLine);
+    }
+
+    namespace codec
+    {
+		enum class Type
+		{
+			NONE = 0,
+			ENCODE = 1,
+			DECODE = 2,
+			ZAP_FAST = 4,
+			XLZ = 8,
+			RC = 32,
+			RC_BITWISE = 64,
+			HUFFMAN = 128,
+			EXPERIMENT = 256,
+		};
+		inline Type operator|(Type lhs, Type rhs) { return (Type)((dword)lhs | (dword)rhs); }
+		inline Type operator&(Type lhs, Type rhs) { return (Type)((dword)lhs & (dword)rhs); }
+		inline bool operator&&(Type lhs, Type rhs) { return (dword)lhs && (dword)rhs; }
+		
+		enum class Result
+		{
+			ERROR_SMALL_INPUT = 0,
+			ERROR_SMALL_DESTINATION = 1,
+			ERROR_DESTINATION_OVERFLOW = 2,
+			SUCCESS = 3
+		};
+		
+		typedef struct State
+		{
+			Type codec;
+			u8* srcData;
+			zapi::storage::MemAlloc<u8> dstData;
+			size srcByteSize;
+			size dstByteSize;
+			size dstMaxByteSize;
+			zapi::storage::MemAlloc<u32> hashTable;
+			size hashTableByteSize;
+			size hashTableSize;
+			boolean debugOutput;
+		} State;
+		
+		std::string ResultToString(const Result& result);
+		zapi::storage::MemAlloc<State> CreateState(
+			const Type codec,
+			const zapi::u8* const srcData,
+			const size srcByteSize,
+			const size maxDstByteSize,
+			const boolean debugOutput
+		);
+		void DestroyState(zapi::storage::MemAlloc<State>& state);
+		Result Codec(zapi::storage::MemAlloc<State>& state);
+		
+		namespace rc
+		{
+			typedef struct Symbol
+			{
+				u32 code;
+				u32 frequency;
+				size cumFrequency;
+			} Symbol;
+			
+			class RangeCodec
+			{
+			public:
+				explicit RangeCodec(storage::MemAlloc<State>* const state);
+				~RangeCodec();
+				
+			private:
+				State* _pState = nullptr;
+				size _totalFrequency = 0;
+				Symbol _symbols[257] = {};
+				qword _bitBuffer = 0;
+				size _bitBufferBitSize = 0;
+			};
+
+			class RangeCodecBitwise
+			{
+			public:
+				explicit RangeCodecBitwise(storage::MemAlloc<State>* const state);
+				~RangeCodecBitwise();
+
+			private:
+				State* _pState = nullptr;
+				size _totalFrequency = 0;
+				Symbol _symbols[2] = {};
+				qword _bitBuffer = 0;
+				size _bitBufferBitSize = 0;
+			};
+		}
+    }
+	
+	namespace utils
+	{
+		size GetCacheLineSize();
+	}
+}

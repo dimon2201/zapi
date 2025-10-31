@@ -1,0 +1,8 @@
+codecs
+data
+.vs
+.vscode
+asm
+bin
+build
+build_vs
