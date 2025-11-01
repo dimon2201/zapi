@@ -1,8 +1,8 @@
-codecs
-data
-.vs
-.vscode
-asm
-bin
-build
-build_vs
+/bin
+/build
+/build_vs
+/codecs
+/data
+/.vs
+/.vscode
+/asm
